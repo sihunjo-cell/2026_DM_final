@@ -106,7 +106,7 @@ python live_review_pipeline.py --skip-collect --run-id 48
 
 ---
 
-## 4. 점수화 파이프라인 (Stage 2 상세 = PDF 방법론)
+## 4. 점수화 파이프라인 (Stage 2 상세)
 
 > 문제의식: viewbot은 **minute mismatch가 "연속적으로"** 일어나는 것. 띄엄띄엄 일어난 mismatch는 정상 방송으로 본다. 따라서 1분 단위 mismatch를 정의하고, 그것이 세션 안에서 **지속 구간**으로 뭉치는지를 찾는다.
 
@@ -149,7 +149,7 @@ load → prep(분단위 전처리) → minute_state(롤링/zero-run 등) → min
 
 ### 4.6 evidence 독립성 설계 (정직한 해석 + 근거)
 - 근본은 **하나의 신호 — "조건부 기대 대비 chat/unique 부족(deficit) + zero-chat 침묵이 *지속적으로* 나타나는가"**. 그래서 "독립 증거 6개"라고 말하면 방어가 안 된다. **대신 그 신호를 서로 겹치지 않는 5개 축(집중도·지속성·크기·비지도 확증·profile 이질성)으로만 요약**해 consensus를 구성했다.
-- **Reason-support를 집계에서 뺀 근거는 프로젝트 스펙 자체**: PDF 6p가 "reason support의 count는 confidence·lift·정답 라벨이 *아니라 설명 근거의 빈도*"라고 명시 → 증거가 아니라 설명이므로 집계 대상이 아니다. (코드에선 여전히 계산·기록되어 `dominant_reason`으로 보여준다.) 이로써 RRA의 독립성 가정 위반(같은 신호를 6번째로 다시 센 것)이 사라진다.
+- **Reason-support를 집계에서 뺀 근거는 프로젝트 스펙 자체**: reason support의 count는 confidence·lift·정답 라벨이 *아니라 설명 근거의 빈도* → 증거가 아니라 설명이므로 집계 대상이 아니다. (코드에선 여전히 계산·기록되어 `dominant_reason`으로 보여준다.) 이로써 RRA의 독립성 가정 위반(같은 신호를 6번째로 다시 센 것)이 사라진다.
 - 5개 축의 **방법 다양성**: Expected-response=지도학습(GBM) 크기, Minute-state=비지도(KMeans) 확증, Interval-anomaly=구간 outlier 탐지 — 서로 다른 추정 방식이라 단순 중복이 아니다. (Minute-state는 deficit feature 기반이라 *약한* 상관은 남으나, 지도/비지도 교차확증 역할.)
 - **설계 근거(표준 기법):** 누수 없는 조건부 기대치 = **run_id GroupKFold OOF + quantile(0.5) 회귀**(cross-fitting), 지속 구간 = **scan statistic `Σz/√n`**, 우연성 = **세션내 permutation null**, 결합 = **percentile-rank 평균 + RRA**(Kolde 2012) + **BH-FDR**. 모두 임의 규칙이 아니라 통계 표준 기법.
 - **모든 점수는 viewbot 확률이 아니라 검토 근거.** 최종 판단은 사람이 한다.
@@ -230,6 +230,4 @@ run_pilot.py → CrawlManager(manager.py)
 
 ### 운영/정리
 - **`chzzk-crawler/.env`의 DB 계정**: 현재 `root`로 직접 접속하도록 되어 있고 비밀번호 앞에 공백이 있을 수 있음. `before_run.py`가 만든 `chzzk_user`로 맞추는 것을 권장.
-- **`before_run.py`의 root 비밀번호**: 이제 환경변수 `MYSQL_ROOT_PASSWORD`로 받는다(하드코딩 제거).
-- **`src/minute_ml.py`**: 현재 파이프라인에서 import되지 않는 미사용 모듈(정리 후보).
-- **대용량 zip**(`dm_pipe_final/*.zip`): 제출/분석 보관용 데이터 아카이브. 코드가 아니며 `.gitignore` 처리됨.
+- **`before_run.py`의 root 비밀번호**: 환경변수 `MYSQL_ROOT_PASSWORD`로 받는다.
