@@ -20,6 +20,15 @@ BASE_COLS = [
     "baseline_agree_unique",
 ]
 
+IMPORTANCE_COLS = [
+    "target",
+    "feature",
+    "importance_mae_increase",
+    "importance_std",
+    "fold_count",
+    "note",
+]
+
 
 def _write_csv(df, path, columns=None):
     path = Path(path)
@@ -145,6 +154,72 @@ def _agreement(model_deficit, bin_deficit):
     return (model.gt(0) & rule.gt(0)).astype(int)
 
 
+def _feature_groups(columns):
+    """Group one-hot category dummies into a single 'category' feature for readable importance."""
+    groups = {}
+    for col in columns:
+        key = "category" if str(col).startswith("category") else str(col)
+        groups.setdefault(key, []).append(col)
+    return groups
+
+
+def _oof_permutation_importance(df, x, cfg=None):
+    """OOF permutation importance measured only on held-out folds, so it shares the
+    no-leakage design of _oof_predict (the model never scores its own training rows).
+    importance = MAE increase (log space) when a feature group is shuffled on the test fold."""
+    cfg = cfg or {}
+    base_cfg = cfg.get("m2_expected_response", {})
+    max_train_rows = int(base_cfg.get("max_train_rows_per_fold", 200000))
+    seed = int(base_cfg.get("seed", 42))
+    n_repeats = max(int(base_cfg.get("importance_n_repeats", 5)), 1)
+    folds, _ = _folds(df)
+    groups = _feature_groups(x.columns)
+    rows = []
+    for offset, target_col in ((0, "log_chat"), (31, "log_unique")):
+        y = pd.to_numeric(df.get(target_col), errors="coerce")
+        rng = np.random.default_rng(seed + offset)
+        per_group = {key: [] for key in groups}
+        for train_idx, test_idx in folds:
+            usable_train = np.asarray(train_idx)[y.iloc[train_idx].notna().to_numpy()]
+            usable_test = np.asarray(test_idx)[y.iloc[test_idx].notna().to_numpy()]
+            if len(usable_train) < 10 or len(usable_test) < 10:
+                continue
+            if max_train_rows > 0 and len(usable_train) > max_train_rows:
+                usable_train = rng.choice(usable_train, size=max_train_rows, replace=False)
+            model = _make_model()
+            model.fit(x.iloc[usable_train], y.iloc[usable_train])
+            x_test = x.iloc[usable_test]
+            y_test = y.iloc[usable_test].to_numpy(dtype=float)
+            base_err = float(np.mean(np.abs(model.predict(x_test) - y_test)))
+            base_vals = {col: x_test[col].to_numpy() for cols in groups.values() for col in cols}
+            for key, cols in groups.items():
+                drops = []
+                for _ in range(n_repeats):
+                    x_perm = x_test.copy()
+                    order = rng.permutation(len(x_perm))
+                    for col in cols:
+                        x_perm[col] = base_vals[col][order]
+                    err = float(np.mean(np.abs(model.predict(x_perm) - y_test)))
+                    drops.append(err - base_err)
+                per_group[key].append(float(np.mean(drops)))
+        for key in groups:
+            fold_vals = per_group.get(key, [])
+            if not fold_vals:
+                continue
+            rows.append({
+                "target": target_col,
+                "feature": key,
+                "importance_mae_increase": float(np.mean(fold_vals)),
+                "importance_std": float(np.std(fold_vals)),
+                "fold_count": int(len(fold_vals)),
+                "note": "held-out OOF permutation importance; MAE increase in log space; review evidence, not probability",
+            })
+    result = pd.DataFrame(rows)
+    if not result.empty:
+        result = result.sort_values(["target", "importance_mae_increase"], ascending=[True, False]).reset_index(drop=True)
+    return result
+
+
 def build_expected_response(minute_df, out, cfg=None):
     """Estimate normal chat and unique response without same-row fit/predict leakage."""
     out = Path(out)
@@ -168,6 +243,15 @@ def build_expected_response(minute_df, out, cfg=None):
     result["baseline_agree_chat"] = _agreement(result["model_chat_deficit"], result.get("chat_deficit"))
     result["baseline_agree_unique"] = _agreement(result["model_unique_deficit"], result.get("unique_deficit"))
 
+    importance_note = "importance는 비활성화되어 계산하지 않았다."
+    base_cfg = (cfg or {}).get("m2_expected_response", {})
+    if bool(base_cfg.get("importance", True)):
+        importance = _oof_permutation_importance(df, x, cfg)
+        _write_csv(importance, out / "base_importance.csv", IMPORTANCE_COLS)
+        importance_note = "base_importance.csv: held-out OOF permutation importance(log space MAE 증가분)로 어떤 feature가 기대 반응 추정에 기여하는지 기록한다. 확률이 아니다."
+    else:
+        _write_csv(pd.DataFrame(columns=IMPORTANCE_COLS), out / "base_importance.csv", IMPORTANCE_COLS)
+
     info = [
         "# expected-response baseline 근거",
         "",
@@ -180,6 +264,7 @@ def build_expected_response(minute_df, out, cfg=None):
         f"unique fit: {unique_note}.",
         f"사용 feature: {', '.join(x.columns[:80])}" + (" ..." if len(x.columns) > 80 else ""),
         "출력: base_log_chat_q50, base_log_unique_q50, model_chat_deficit, model_unique_deficit.",
+        importance_note,
         "한계: 실제 정답 라벨이 없는 baseline이다. deficit은 수동 검토 근거이며 확률이 아니다.",
     ]
     (out / "base_pred_info.txt").write_text("\n".join(info) + "\n", encoding="utf-8")

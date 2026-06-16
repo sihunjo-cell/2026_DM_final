@@ -124,6 +124,38 @@ SYNTHETIC_RECOVERY_COLS = [
     "note",
 ]
 
+SCORECARD_COLS = [
+    "metric",
+    "value",
+    "scale",
+    "what_it_checks",
+    "note",
+]
+
+PROFILE_COLS = [
+    "feature",
+    "top_n",
+    "rest_n",
+    "top_median",
+    "rest_median",
+    "top_mean",
+    "rest_mean",
+    "std_mean_diff",
+    "direction",
+    "note",
+]
+
+# (m2_scores column, aggregation) used to profile why top review sessions rank high.
+PROFILE_FEATURES = [
+    ("log_viewer", "median"),
+    ("chat_deficit", "median"),
+    ("unique_deficit", "median"),
+    ("rolling_chat_deficit_5m", "median"),
+    ("zero_run_len", "max"),
+    ("rolling_zero_rate_5m", "median"),
+    ("minute_mismatch_score", "median"),
+]
+
 
 _available_fonts = {f.name for f in font_manager.fontManager.ttflist}
 plt.rcParams["font.family"] = "Malgun Gothic" if "Malgun Gothic" in _available_fonts else "DejaVu Sans"
@@ -1147,16 +1179,46 @@ def write_eval_plots(out, eval_dir):
         _save_fig(fig, plots / "25_minute_signal_sensitivity.png")
 
     rec = _read_csv(Path(eval_dir) / "synthetic" / "synthetic_interval_recovery.csv")
+    scen = _read_csv(Path(eval_dir) / "synthetic" / "synthetic_recovery_by_scenario.csv")
+    rec = rec.copy()
+    if not rec.empty:
+        rec["iou_num"] = pd.to_numeric(rec.get("iou"), errors="coerce")
+        rec = rec.dropna(subset=["iou_num"])
     if rec.empty:
         _blank_plot(plots / "26_synthetic_interval_recovery.png", "synthetic mismatch recovery, not real viewbot performance")
     else:
-        fig, ax = plt.subplots(figsize=(10, 5.5))
-        labels = rec["injection_type"].astype(str) + "\n" + rec["synthetic_session_key"].astype(str)
-        ax.barh(labels, pd.to_numeric(rec.get("iou"), errors="coerce"), color="tab:red", edgecolor="black", alpha=0.75)
-        ax.set_xlim(0, 1)
-        ax.set_xlabel("interval IoU")
-        ax.set_title("Synthetic mismatch recovery, not real viewbot performance")
+        # negative-control scenarios use the same flag as the scorecard (no positive denominator).
+        control_types = set()
+        if not scen.empty and "n_positive_denominator" in scen.columns:
+            control_types = set(scen.loc[pd.to_numeric(scen["n_positive_denominator"], errors="coerce").fillna(1).eq(0), "injection_type"].astype(str))
+        grouped = rec.groupby("injection_type")["iou_num"]
+        order = grouped.median().sort_values().index.tolist()
+        data = [grouped.get_group(t).to_numpy() for t in order]
+        n = max(len(order), 1)
+        fig, ax = plt.subplots(figsize=(10, max(4.5, 0.42 * n + 1.2)))
+        bp = ax.boxplot(data, vert=False, patch_artist=True, widths=0.6, showfliers=False)
+        for patch, t in zip(bp["boxes"], order):
+            patch.set_facecolor("tab:gray" if t in control_types else "tab:red")
+            patch.set_alpha(0.6)
+        for med in bp["medians"]:
+            med.set_color("black")
+        ax.set_yticklabels([f"{t} (n={len(grouped.get_group(t))})" for t in order])
+        for i, arr in enumerate(data, start=1):
+            m = float(np.median(arr))
+            ax.text(min(m + 0.02, 0.98), i, f"{m:.2f}", va="center", fontsize=8)
+        ax.set_xlim(0, 1.02)
+        ax.set_xlabel("injected-interval localization IoU (per synthetic session)")
+        ax.set_title("Synthetic mismatch recovery by scenario, not real viewbot performance")
         ax.grid(axis="x", alpha=0.25)
+        from matplotlib.patches import Patch
+        ax.legend(
+            handles=[
+                Patch(facecolor="tab:red", alpha=0.6, label="injected positive scenario"),
+                Patch(facecolor="tab:gray", alpha=0.6, label="negative-control-like"),
+            ],
+            loc="lower right",
+            fontsize=8,
+        )
         _save_fig(fig, plots / "26_synthetic_interval_recovery.png")
 
 
@@ -1182,12 +1244,29 @@ def write_evaluation_report(out, eval_dir, cfg):
     sig = _read_csv(Path(eval_dir) / "minute_signal" / "signal_ablation_summary.csv")
     weights = _read_csv(Path(eval_dir) / "minute_signal" / "signal_weight_sensitivity_summary.csv")
     rec = _read_csv(Path(eval_dir) / "synthetic" / "synthetic_interval_recovery.csv")
+    profile = _read_csv(Path(eval_dir) / "top_session_profile.csv")
+    scorecard = _read_csv(Path(eval_dir) / "eval_scorecard.csv")
 
     fam_min = pd.to_numeric(fam.get("top100_overlap"), errors="coerce").min() if not fam.empty else np.nan
     agg_min = pd.to_numeric(agg.get("top100_overlap"), errors="coerce").min() if not agg.empty else np.nan
     sig_min = pd.to_numeric(sig.get("top100_session_overlap"), errors="coerce").min() if not sig.empty else np.nan
     weight_min = pd.to_numeric(weights.get("top100_session_overlap"), errors="coerce").min() if not weights.empty else np.nan
     rec_med = pd.to_numeric(rec.get("iou"), errors="coerce").median() if not rec.empty else np.nan
+
+    top_feature = "not available"
+    if not profile.empty and "std_mean_diff" in profile.columns:
+        prof = profile.copy()
+        prof["_abs_d"] = pd.to_numeric(prof["std_mean_diff"], errors="coerce").abs()
+        prof = prof.dropna(subset=["_abs_d"]).sort_values("_abs_d", ascending=False)
+        if not prof.empty:
+            row = prof.iloc[0]
+            top_feature = f"{row['feature']}({row['direction']}, d={_fmt(row['std_mean_diff'])})"
+
+    def _score_value(metric):
+        if scorecard.empty or "metric" not in scorecard.columns:
+            return np.nan
+        hit = scorecard.loc[scorecard["metric"].astype(str).eq(metric), "value"]
+        return pd.to_numeric(hit, errors="coerce").iloc[0] if not hit.empty else np.nan
 
     lines = [
         "# 평가 안정성 리포트",
@@ -1231,8 +1310,160 @@ def write_evaluation_report(out, eval_dir, cfg):
         "",
         "## 9. 권장 해석",
         "최종 review_order는 label-free mismatch pipeline이 만든 수동 검토 우선순위로 사용한다. 이 eval 폴더는 robustness 근거와 민감도 한계를 기록하는 appendix로 해석한다.",
+        "",
+        "## 10. 상위 후보 vs 나머지 프로파일 대비",
+        f"top_session_profile.csv는 상위 review 세션과 나머지 세션의 minute-signal 프로파일을 표준화 평균차(Cohen d)로 비교한다. 표준화 평균차 절댓값이 가장 큰 신호는 {top_feature}이다.",
+        "이는 상위 후보가 어떤 신호 때문에 위로 올라갔는지 설명하는 자료이며 확률이나 판정 라벨이 아니다.",
+        "",
+        "## 11. label-free 평가 스코어카드",
+        f"eval_scorecard.csv는 robustness 최소 overlap과 synthetic positive/negative-control localization을 한 표로 모은다. synthetic positive median IoU는 {_fmt(_score_value('synthetic_positive_median_iou'))}, negative-control median IoU는 {_fmt(_score_value('synthetic_negative_control_median_iou'))}이다.",
+        "모든 값은 robustness 또는 synthetic sanity 진단이며 supervised 성능지표가 아니다.",
     ]
     _write_text(Path(eval_dir) / "evaluation_report.md", "\n".join(lines))
+
+
+def _std_mean_diff(top_vals, rest_vals):
+    """Standardized mean difference (Cohen d, pooled SD) of top vs rest sessions."""
+    t = pd.to_numeric(pd.Series(top_vals), errors="coerce").dropna().to_numpy(dtype=float)
+    r = pd.to_numeric(pd.Series(rest_vals), errors="coerce").dropna().to_numpy(dtype=float)
+    if len(t) < 2 or len(r) < 2:
+        return np.nan
+    sp = math.sqrt(((len(t) - 1) * np.var(t, ddof=1) + (len(r) - 1) * np.var(r, ddof=1)) / (len(t) + len(r) - 2))
+    if sp <= 0:
+        return np.nan
+    return float((np.mean(t) - np.mean(r)) / sp)
+
+
+def run_top_session_profile(out, eval_dir, cfg):
+    """Contrast minute-signal profiles of top review sessions vs the rest, so the
+    final ranking is explainable (which signals push a session to the top)."""
+    out = Path(out)
+    eval_dir = Path(eval_dir)
+    eval_cfg = cfg.get("eval_robustness", {})
+    review_all, review, families, _ = _review_frames(out, eval_cfg)
+    base = _base_order(review, review_all)
+    scores = _read_csv(out / "m2_scores.csv")
+    if base.empty or scores.empty or "session_key" not in scores.columns:
+        _write_csv(pd.DataFrame(columns=PROFILE_COLS), eval_dir / "top_session_profile.csv", PROFILE_COLS)
+        return pd.DataFrame(columns=PROFILE_COLS)
+
+    scores = scores.copy()
+    scores["session_key"] = scores["session_key"].astype(str)
+    agg_map = {col: how for col, how in PROFILE_FEATURES if col in scores.columns}
+    if not agg_map:
+        _write_csv(pd.DataFrame(columns=PROFILE_COLS), eval_dir / "top_session_profile.csv", PROFILE_COLS)
+        return pd.DataFrame(columns=PROFILE_COLS)
+
+    per_session = scores.groupby("session_key").agg(agg_map).reset_index()
+    base = base.copy()
+    base["session_key"] = base["session_key"].astype(str)
+    base["review_order"] = pd.to_numeric(base["review_order"], errors="coerce")
+    merged = base.merge(per_session, on="session_key", how="left")
+
+    topk_list = _topk(eval_cfg)
+    default_k = topk_list[1] if len(topk_list) > 1 else (topk_list[0] if topk_list else 50)
+    k = int(eval_cfg.get("profile_top_k", default_k))
+    top_mask = merged["review_order"].le(k)
+    top = merged.loc[top_mask]
+    rest = merged.loc[~top_mask]
+
+    rows = []
+    for col, how in agg_map.items():
+        top_col = pd.to_numeric(top[col], errors="coerce")
+        rest_col = pd.to_numeric(rest[col], errors="coerce")
+        top_mean = float(top_col.mean()) if top_col.notna().any() else np.nan
+        rest_mean = float(rest_col.mean()) if rest_col.notna().any() else np.nan
+        direction = "higher_in_top" if (pd.notna(top_mean) and pd.notna(rest_mean) and top_mean >= rest_mean) else "lower_in_top"
+        rows.append({
+            "feature": f"{col}_{how}",
+            "top_n": int(top_col.notna().sum()),
+            "rest_n": int(rest_col.notna().sum()),
+            "top_median": float(top_col.median()) if top_col.notna().any() else np.nan,
+            "rest_median": float(rest_col.median()) if rest_col.notna().any() else np.nan,
+            "top_mean": top_mean,
+            "rest_mean": rest_mean,
+            "std_mean_diff": _std_mean_diff(top[col], rest[col]),
+            "direction": direction,
+            "note": f"top=review_order<={k}; standardized mean difference is review evidence, not probability",
+        })
+    profile = _write_csv(pd.DataFrame(rows), eval_dir / "top_session_profile.csv", PROFILE_COLS)
+
+    plots = out / "plots"
+    plots.mkdir(parents=True, exist_ok=True)
+    pdat = profile.loc[pd.to_numeric(profile["std_mean_diff"], errors="coerce").notna()].copy()
+    if pdat.empty:
+        _blank_plot(plots / "28_top_session_profile.png", "top vs rest session profile - review evidence, not label")
+    else:
+        pdat["d"] = pd.to_numeric(pdat["std_mean_diff"], errors="coerce")
+        pdat = pdat.sort_values("d")
+        colors = ["tab:red" if v >= 0 else "tab:blue" for v in pdat["d"]]
+        fig, ax = plt.subplots(figsize=(10, 5.5))
+        ax.barh(pdat["feature"].astype(str), pdat["d"], color=colors, edgecolor="black", alpha=0.8)
+        ax.axvline(0, color="black", linewidth=0.8)
+        ax.set_xlabel(f"standardized mean difference (top{k} minus rest)")
+        ax.set_title(f"Top{k} vs rest session profile - review evidence, not ground-truth label")
+        ax.grid(axis="x", alpha=0.25)
+        _save_fig(fig, plots / "28_top_session_profile.png")
+    return profile
+
+
+def write_eval_scorecard(out, eval_dir, cfg):
+    """One-page roll-up of label-free diagnostics: ranking robustness, synthetic
+    positive vs negative-control localization, and the top expected-response feature."""
+    out = Path(out)
+    eval_dir = Path(eval_dir)
+    fam = _read_csv(eval_dir / "family_ablation_summary.csv")
+    agg = _read_csv(eval_dir / "aggregation_sensitivity_summary.csv")
+    sig = _read_csv(eval_dir / "minute_signal" / "signal_ablation_summary.csv")
+    weights = _read_csv(eval_dir / "minute_signal" / "signal_weight_sensitivity_summary.csv")
+    scenario = _read_csv(eval_dir / "synthetic" / "synthetic_recovery_by_scenario.csv")
+    importance = _read_csv(out / "base_importance.csv")
+
+    def _min(df, col):
+        return float(pd.to_numeric(df.get(col), errors="coerce").min()) if not df.empty else np.nan
+
+    rows = [
+        {"metric": "family_ablation_min_top100_overlap", "value": _min(fam, "top100_overlap"), "scale": "0-1 higher is more robust", "what_it_checks": "review_order가 단일 evidence family에 의존하지 않는가", "note": "ranking robustness diagnostic, not accuracy"},
+        {"metric": "aggregation_min_top100_overlap", "value": _min(agg, "top100_overlap"), "scale": "0-1 higher is more robust", "what_it_checks": "집계 방식 변경에 review 순서가 안정적인가", "note": "ranking robustness diagnostic, not accuracy"},
+        {"metric": "signal_ablation_min_top100_session_overlap", "value": _min(sig, "top100_session_overlap"), "scale": "0-1 higher is more robust", "what_it_checks": "minute signal 하나 제거에 안정적인가", "note": "ranking robustness diagnostic, not accuracy"},
+        {"metric": "signal_weight_min_top100_session_overlap", "value": _min(weights, "top100_session_overlap"), "scale": "0-1 higher is more robust", "what_it_checks": "신호 가중치 변형에 안정적인가", "note": "ranking robustness diagnostic, not accuracy"},
+    ]
+
+    pos_iou = neg_iou = np.nan
+    if not scenario.empty:
+        is_control = scenario["injection_type"].astype(str).str.contains("intermittent_zero_control", case=False, na=False)
+        positive = scenario.loc[(pd.to_numeric(scenario.get("n_positive_denominator"), errors="coerce").fillna(0) > 0) & ~is_control]
+        control = scenario.loc[is_control]
+        pos_iou = float(pd.to_numeric(positive.get("median_iou"), errors="coerce").median()) if not positive.empty else np.nan
+        neg_iou = float(pd.to_numeric(control.get("median_iou"), errors="coerce").median()) if not control.empty else np.nan
+    rows.append({"metric": "synthetic_positive_median_iou", "value": pos_iou, "scale": "0-1 higher localizes injected interval", "what_it_checks": "주입한 연속 mismatch 구간을 회수하는가", "note": NOTE_NOT_REAL})
+    rows.append({"metric": "synthetic_negative_control_median_iou", "value": neg_iou, "scale": "0-1 lower means fewer false intervals", "what_it_checks": "간헐적 zero 대조군에서 거짓 구간을 덜 잡는가", "note": "negative-control-like diagnostic"})
+
+    if not importance.empty and "target" in importance.columns:
+        chat_imp = importance.loc[importance["target"].astype(str).eq("log_chat")].copy()
+        chat_imp = chat_imp.sort_values("importance_mae_increase", ascending=False)
+        if not chat_imp.empty:
+            rows.append({"metric": "expected_response_top_feature_log_chat", "value": str(chat_imp.iloc[0]["feature"]), "scale": "feature name", "what_it_checks": "조건부 기대 chat 추정에서 기여가 가장 큰 변수", "note": "OOF permutation importance, not probability"})
+
+    scorecard = _write_csv(pd.DataFrame(rows), eval_dir / "eval_scorecard.csv", SCORECARD_COLS)
+
+    plots = out / "plots"
+    plots.mkdir(parents=True, exist_ok=True)
+    numeric = scorecard.copy()
+    numeric["value_num"] = pd.to_numeric(numeric["value"], errors="coerce")
+    numeric = numeric.loc[numeric["value_num"].notna()]
+    if numeric.empty:
+        _blank_plot(plots / "27_eval_scorecard.png", "label-free evaluation scorecard - not a supervised score")
+    else:
+        fig, ax = plt.subplots(figsize=(10, 5.5))
+        ax.barh(numeric["metric"].astype(str), numeric["value_num"], color="tab:purple", edgecolor="black", alpha=0.8)
+        ax.set_xlim(0, 1)
+        ax.set_xlabel("score (0-1)")
+        ax.set_title("Label-free evaluation scorecard - robustness and synthetic sanity, not a supervised score")
+        ax.grid(axis="x", alpha=0.25)
+        ax.invert_yaxis()
+        _save_fig(fig, plots / "27_eval_scorecard.png")
+    return scorecard
 
 
 def run_eval_robustness(out, cfg):
@@ -1254,6 +1485,9 @@ def run_eval_robustness(out, cfg):
         run_minute_signal_sensitivity(out, eval_dir, cfg)
     if eval_cfg.get("run_synthetic_interval_recovery", True):
         run_synthetic_interval_recovery(out, eval_dir, cfg)
+    if eval_cfg.get("run_top_session_profile", True):
+        run_top_session_profile(out, eval_dir, cfg)
+    write_eval_scorecard(out, eval_dir, cfg)
     write_eval_plots(out, eval_dir)
     write_evaluation_report(out, eval_dir, cfg)
     return {"eval_dir": str(eval_dir)}

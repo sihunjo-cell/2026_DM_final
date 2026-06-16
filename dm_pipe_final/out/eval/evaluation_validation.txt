@@ -1,4 +1,4 @@
 status: PASS
-eval_dir: C:\Users\simon\dm_project_2026\DM_project-1-\dm_pipe_final\out\eval
+eval_dir: C:\Users\simon\dm_project_2026\2026_DM_final\dm_pipe_final\out\eval
 main_outputs_changed: no
 note: evaluation diagnostics are separate from main validation.

@@ -15,11 +15,11 @@
 - synthetic 중간 CSV 보존 여부: False
 
 ## 3. Family 제거 민감도
-각 family를 하나씩 제거한 뒤 남은 family strength로 후보 순서를 다시 계산한다. 최소 top100 overlap은 0.660이다.
+각 family를 하나씩 제거한 뒤 남은 family strength로 후보 순서를 다시 계산한다. 최소 top100 overlap은 0.540이다.
 overlap이 높으면 최종 review_order가 특정 family 하나에만 임의로 의존하지 않는다는 근거가 된다. 낮은 값은 핵심 근거 family를 식별하는 민감도 신호로만 해석한다.
 
 ## 4. 집계 방식 민감도
-consensus-only, RRA-only, consensus-plus-RRA, median, trimmed mean, family-exclusion 변형을 비교한다. 최소 top100 overlap은 0.700이다.
+consensus-only, RRA-only, consensus-plus-RRA, median, trimmed mean, family-exclusion 변형을 비교한다. 최소 top100 overlap은 0.610이다.
 RRA는 순위 집계 근거이며, 주 해석은 consensus-first이고 RRA는 보조 근거로 사용한다.
 
 ## 5. 근거 균형과 동점 점검
@@ -39,3 +39,11 @@ Synthetic interval recovery의 median IoU는 0.967이다. 이 값은 synthetic m
 
 ## 9. 권장 해석
 최종 review_order는 label-free mismatch pipeline이 만든 수동 검토 우선순위로 사용한다. 이 eval 폴더는 robustness 근거와 민감도 한계를 기록하는 appendix로 해석한다.
+
+## 10. 상위 후보 vs 나머지 프로파일 대비
+top_session_profile.csv는 상위 review 세션과 나머지 세션의 minute-signal 프로파일을 표준화 평균차(Cohen d)로 비교한다. 표준화 평균차 절댓값이 가장 큰 신호는 rolling_chat_deficit_5m_median(higher_in_top, d=1.584)이다.
+이는 상위 후보가 어떤 신호 때문에 위로 올라갔는지 설명하는 자료이며 확률이나 판정 라벨이 아니다.
+
+## 11. label-free 평가 스코어카드
+eval_scorecard.csv는 robustness 최소 overlap과 synthetic positive/negative-control localization을 한 표로 모은다. synthetic positive median IoU는 0.978, negative-control median IoU는 0.775이다.
+모든 값은 robustness 또는 synthetic sanity 진단이며 supervised 성능지표가 아니다.

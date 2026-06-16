@@ -625,6 +625,8 @@ def _write_plot_doc(out):
         "19_reason.png": "counts top explanation reasons only; not confidence/lift/prediction rule",
         "20_rra.png": "family RRA evidence rank; rra_q=family_rra_q이며 확률 아님; labels show top review candidates only",
         "21_interval.png": "interval duration/empirical_p caution 진단; one shared colorbar is family consensus score, not probability",
+        "27_eval_scorecard.png": "label-free 평가 스코어카드; robustness/synthetic sanity 진단이며 supervised 성능지표 아님; 정답 라벨/확률 아님",
+        "28_top_session_profile.png": "상위 review 후보 vs 나머지 세션 minute-signal 표준화 평균차; 설명용 검토 근거이며 정답 라벨/확률 아님",
     }
     actual = sorted(path.name for path in plots.glob("*.png"))
     manifest = [f"plots/{name}" for name in actual]

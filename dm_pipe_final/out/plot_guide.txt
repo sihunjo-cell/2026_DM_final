@@ -26,6 +26,8 @@ Method 2 plots:
 - 24_evidence_balance.png: generated plot; alias/diagnostic; 정답 라벨/확률 아님
 - 25_minute_signal_sensitivity.png: generated plot; alias/diagnostic; 정답 라벨/확률 아님
 - 26_synthetic_interval_recovery.png: generated plot; alias/diagnostic; 정답 라벨/확률 아님
+- 27_eval_scorecard.png: label-free 평가 스코어카드; robustness/synthetic sanity 진단이며 supervised 성능지표 아님; 정답 라벨/확률 아님
+- 28_top_session_profile.png: 상위 review 후보 vs 나머지 세션 minute-signal 표준화 평균차; 설명용 검토 근거이며 정답 라벨/확률 아님
 
 해석 제한:
 - cluster_number와 minute_cluster는 behavior state id이며 정답 라벨/확률 아님.
@@ -62,3 +64,5 @@ Method 2 plots:
 - plots/24_evidence_balance.png
 - plots/25_minute_signal_sensitivity.png
 - plots/26_synthetic_interval_recovery.png
+- plots/27_eval_scorecard.png
+- plots/28_top_session_profile.png

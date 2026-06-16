@@ -151,6 +151,10 @@ m2_scan:
 m2_expected_response:
   max_train_rows_per_fold: 200000
   seed: 42
+  # OOF permutation importance: which features drive the expected chat/unique baseline.
+  # Measured on held-out folds only, so it shares the no-leakage design. Diagnostic, not probability.
+  importance: true
+  importance_n_repeats: 5
 
 m2_interval_anomaly:
   enabled: true
@@ -202,6 +206,9 @@ eval_robustness:
   run_tie_audit: true
   run_minute_signal_sensitivity: true
   run_synthetic_interval_recovery: true
+  run_top_session_profile: true
+  # Top vs rest profile contrast boundary (review_order <= profile_top_k counts as "top").
+  profile_top_k: 50
 
   families:
     - scan_family_rank
