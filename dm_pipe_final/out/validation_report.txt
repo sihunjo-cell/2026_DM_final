@@ -1,0 +1,177 @@
+# Validation Report
+
+검증 단계: post-zip
+전체 결과: PASS
+
+## 데이터/QC 수치
+- minute_all session 수: 2092
+- minute_model session 수: 1997
+- all-zero-chat session 수: 95
+- all-zero-chat minute 수: 8752
+- session_summary_processed session 수: 1954
+- min_n filter 전/후 session 수: 1997 / 1954
+
+## 결측/무결성
+- minute_all viewer_count_last original missing rows: 1
+- minute_model viewer_count_last original missing rows: 1
+- viewer_count_last missing after ffill/bfill: validation은 standalone report와 값 단위 재생성으로 확인
+- chat_count missing rows: minute_all=0, minute_model=0
+- unique_chatters missing rows: minute_all=0, minute_model=0
+- clock gaps >1 min count: minute_all=634, minute_model=458
+- old no-gap zero-run 대비 바뀐 session 수: 32
+- 바뀐 cluster_number 수(참고 재계산): 0
+- gap-aware zrun_max max/sum: 52 / 2684
+
+## KMeans
+- selected session K from cluster_select.csv: 2
+- actual session cluster_number unique count: 2
+- session K consistency: PASS
+- session selection_score table:
+- k=2, silhouette=0.7868111731025642, calinski_harabasz=3316.366371153014, davies_bouldin=0.4676869582851599, selection_score=0.96, selected=True
+- k=3, silhouette=0.6176052996307604, calinski_harabasz=3240.751860972954, davies_bouldin=0.6172242290995668, selection_score=0.68, selected=False
+- k=4, silhouette=0.553321481708896, calinski_harabasz=2978.6527072184317, davies_bouldin=0.6253438930839754, selection_score=0.5199999999999999, selected=False
+- k=5, silhouette=0.3392378770138257, calinski_harabasz=2996.7447859383265, davies_bouldin=0.8384649915910517, selection_score=0.4, selected=False
+- k=6, silhouette=0.3252834857130937, calinski_harabasz=3082.303769199119, davies_bouldin=0.8375958673012605, selection_score=0.44, selected=False
+- cluster_number value counts: {'0': 1843, '1': 111}
+- selected minute K from mc_select.csv: 2
+- actual minute_cluster unique count: 2
+- minute K consistency: PASS
+- minute selection_score table:
+- param=k=2, silhouette=0.3710463641013686, calinski_harabasz=145203.66617853488, davies_bouldin=1.049751018152746, selection_score=0.8333333333333334, selected=True
+- param=k=3, silhouette=0.2987133726555173, calinski_harabasz=121054.25297396404, davies_bouldin=1.1136737557981606, selection_score=0.5476190476190476, selected=False
+- param=k=4, silhouette=0.3010221010253092, calinski_harabasz=122099.44132194236, davies_bouldin=1.0174918826233723, selection_score=0.7857142857142857, selected=False
+- param=k=5, silhouette=0.2893538468174044, calinski_harabasz=115410.13632493424, davies_bouldin=1.0535994809788, selection_score=0.5476190476190476, selected=False
+- param=k=6, silhouette=0.2677216556423518, calinski_harabasz=108556.864008545, davies_bouldin=1.0666023675956122, selection_score=0.4047619047619047, selected=False
+- param=k=7, silhouette=0.2691689741454585, calinski_harabasz=106184.91626456354, davies_bouldin=1.0628312810991705, selection_score=0.3809523809523809, selected=False
+- param=k=8, silhouette=0.2703641710853094, calinski_harabasz=104089.71550887212, davies_bouldin=1.0243146235121674, selection_score=0.4999999999999999, selected=False
+
+## State Transition Consistency
+- m2_state transition_count definition: actual minute_cluster state changes within session
+- source used for recomputation: m2_scores.csv
+- checked sessions: 1997
+- mismatched transition_count sessions: 0
+- transition_count consistency: PASS
+- transition_count equals n_minutes-1 for all sessions: PASS
+
+## Method2 Family Ranking
+- final ranking method: equal_weight_family_consensus_plus_family_rra
+- raw scan evidence duplicated in final RRA: PASS
+- family rank columns present: PASS
+- family_consensus_score present: PASS
+- raw_rra_q preserved for audit: PASS
+- m2_review_rank_audit.csv exists: PASS
+- top10 short interval count, duration <= 1: WARNING 0
+- interpretation: review_order is manual review priority, not probability or ground-truth label
+
+## Parameter Rationale
+- parameter_rationale.md exists: PASS
+- documented cfg parameters: PASS missing=[]
+- certainty wording absent: PASS forbidden=[]
+
+## Plot Semantics
+- 04_cluster_session uses discrete legend for cluster_number: PASS
+- 04_cluster_session has no cluster_number colorbar: PASS
+- 05_session_k_selection shows selection_score: PASS
+- 05_session_k_selection does not present inertia as selection criterion: PASS
+- 06/08 heatmap colorbars labeled as scaled profile values, not cluster ids: PASS
+- 19_reason uses text_reason_included counts: PASS
+- 20_rra labels not heavily overlapped or limited to top candidates: PASS
+- 21_interval uses one shared colorbar: PASS
+- plot_audit exists: PASS
+
+## Synthetic Sanity
+- status: not_run
+- reason: synthetic_sanity_disabled_or_not_scored
+- recovered_rate: not reported
+- interpretation: synthetic sanity was not executed and is not used as performance evidence.
+
+## Evaluation Robustness Validation
+- status: PASS
+- eval_dir: C:\Users\simon\dm_project_2026\DM_project-1-\dm_pipe_final\out\eval
+- scope: separate label-free review ranking robustness diagnostics
+- family_ablation_summary.csv: PASS
+- aggregation_sensitivity_summary.csv: PASS
+- evidence_balance_summary.csv: PASS
+- tie_audit.csv: PASS
+- evaluation_report.md: PASS
+- evaluation_error.txt: absent
+
+## All-zero Chat QC Bucket
+- qc_zero minute rows: 8752
+- qc_zero sessions: 95
+- qc_zero_session_review.csv: PASS
+- all_zero_chat all true: PASS
+- total_chat_count all zero: PASS
+- excluded from minute_model/session_summary_processed: PASS
+- interpretation: preserved for manual QC; not used as behavior-model label.
+
+## Zip hash
+- 최종_전달용_필수자료.zip: b695978f9783cf889159d67ff04d0e8d094164468747d2af5fa75df8976950de
+
+## PASS/FAIL
+- PASS strict raw minute columns: minute_all=['source_file', 'run_id', 'broad_no', 'session_key', 'user_id', 'category_id', 'minute_ts', 'viewer_count_last', 'chat_count', 'unique_chatters']; minute_model=['source_file', 'run_id', 'broad_no', 'session_key', 'user_id', 'category_id', 'minute_ts', 'viewer_count_last', 'chat_count', 'unique_chatters']
+- PASS required columns: minute_all missing=none; minute_model missing=none; session_summary_processed missing=none
+- PASS duplicate key count: minute_all=0, minute_model=0
+- PASS negative viewer/chat/unique count: negative_total=0
+- PASS chat_count < unique_chatters count: minute_all=0, minute_model=0
+- PASS clock gaps >1 minute count: minute_all=634, minute_model=458
+- PASS session zrun_max gap-aware: compared=1954, missing=0, mismatched=0
+- PASS minute_state zero_run_len gap-aware: mismatched_rows=0, rows=207072
+- PASS interval_max_zero_run gap-aware: checked=1997, mismatched_intervals=0
+- PASS standalone rebuild value-level match: value-level match rows=1954 cols=21
+- PASS leakage absence: raw=none; session=none
+- PASS cluster_number exists: columns=['run_id', 'broad_no', 'session_key', 'user_id', 'category_id', 'n', 'start', 'end', 'viewer_med', 'viewer_max', 'chat_mean', 'unique_mean', 'zero_rate', 'zrun_max', 'gap_med', 'gap_max', 'log_viewer', 'log_chat', 'log_unique', 'log_zrun', 'cluster_number']
+- PASS cluster_select selected=True row count: selected_count=1; selected_k=2; status=ok
+- PASS session K consistency: selected_k=2; actual_unique=2; txt_k=2
+- PASS mc_select KMeans selected=True row count: selected_count=1; selected_k=2; status=ok
+- PASS minute K consistency: selected_k=2; actual_unique=2; txt_k=2; model_selection_k=2; model_selection_count=1
+- PASS minute cluster model selection table: columns_missing=[]; selected_final_count=1; algorithms=['GMM', 'HDBSCAN', 'KMeans']
+- PASS m2_review threshold caution flags absent: present=[]
+- PASS m2_review order uses family consensus: review_order의 1차 정렬 근거가 family_consensus_score 및 family RRA인지 확인
+- PASS raw scan evidence not duplicated in final RRA: scan_interval/empirical_p/scan_strength are represented by scan_family_rank
+- PASS family rank columns present: missing=[]
+- PASS family_consensus_score present: 
+- PASS raw_rra_q preserved for audit: 
+- PASS m2_review_rank_audit.csv exists: 
+- PASS m2_review forbidden columns absent: forbidden_present=[]
+- PASS m2_state transition_count actual state changes: source=m2_scores.csv; checked=1997; mismatched_sessions=0
+- PASS transition_count not fixed adjacent-pair count: transition_count_equals_n_minutes_minus_1_for_all_sessions=False
+- PASS synthetic sanity summary exists/status: status=not_run; reason=synthetic_sanity_disabled_or_not_scored; missing_cols=[]
+- PASS synthetic sanity not_run metrics blank: status=not_run; recovered_rate=not reported
+- PASS synthetic sanity ok metrics valid: status=not_run; recovered_rate=not reported; matches_ok=True
+- PASS qc_zero_session_review exists/schema: missing_cols=[]
+- PASS qc_zero_session_review session count matches qc_zero.csv: qc_zero_sessions=95; review_sessions=95
+- PASS qc_zero_session_review all-zero content: all_zero_chat=True; total_chat_zero=True
+- PASS qc_zero_session_review excluded from behavior/session handoff: minute_model_overlap=[]; session_summary_overlap=[]
+- PASS qc_zero_session_review qc_reason avoids forbidden certainty terms: qc_reason is manual-QC wording only
+- PASS legacy episode grid disabled outputs absent: m2_ep.csv=False, m2_sens.csv=False, m2_candidates.csv=False, m2_eval.csv=False, m2_stability.csv=False
+- PASS 07 stability plot uses mc_stab: minute KMeans behavior-state stability diagnostic; mc_stab.csv 및 backward-compatible plot filename 존재
+- PASS plot_manifest matches actual plots: actual=['plots/01_data_quality.png', 'plots/02_dist_time.png', 'plots/03_view_chat.png', 'plots/04_cluster_session.png', 'plots/05_session_k_selection.png', 'plots/06_session_cluster_profile.png', 'plots/07_ms.png', 'plots/07_session_cluster_stability.png', 'plots/08_cluster_minute.png', 'plots/08_mc.png', 'plots/13_m2_pipe.png', 'plots/15_null.png', 'plots/16_state.png', 'plots/18_review.png', 'plots/19_reason.png', 'plots/20_rra.png', 'plots/21_interval.png', 'plots/22_family_ablation_heatmap.png', 'plots/23_aggregation_sensitivity.png', 'plots/24_evidence_balance.png', 'plots/25_minute_signal_sensitivity.png', 'plots/26_synthetic_interval_recovery.png']; manifest=['plots/01_data_quality.png', 'plots/02_dist_time.png', 'plots/03_view_chat.png', 'plots/04_cluster_session.png', 'plots/05_session_k_selection.png', 'plots/06_session_cluster_profile.png', 'plots/07_ms.png', 'plots/07_session_cluster_stability.png', 'plots/08_cluster_minute.png', 'plots/08_mc.png', 'plots/13_m2_pipe.png', 'plots/15_null.png', 'plots/16_state.png', 'plots/18_review.png', 'plots/19_reason.png', 'plots/20_rra.png', 'plots/21_interval.png', 'plots/22_family_ablation_heatmap.png', 'plots/23_aggregation_sensitivity.png', 'plots/24_evidence_balance.png', 'plots/25_minute_signal_sensitivity.png', 'plots/26_synthetic_interval_recovery.png']; stale_plot_mentions=[]
+- PASS plot_audit exists: 
+- PASS 04_cluster_session uses discrete legend for cluster_number: cluster_count=2; legend_count=2
+- PASS 04_cluster_session has no cluster_number colorbar: 
+- PASS 05_session_k_selection shows selection_score: 
+- PASS 05_session_k_selection does not present inertia as selection criterion: 
+- PASS 06/08 heatmap colorbars labeled as scaled profile values, not cluster ids: 
+- PASS 19_reason uses text_reason_included counts: 
+- PASS 20_rra labels limited to top candidates: 
+- PASS 21_interval uses one shared colorbar: 
+- PASS parameter_rationale.md exists: 
+- PASS cfg parameters documented in parameter_rationale.md: missing=[]
+- PASS parameter_rationale.md avoids certainty wording: forbidden=[]
+- PASS method_registry exists/status: hangul=745
+- PASS cluster_number leakage warning: X_core_cols.txt warning 확인
+- PASS X_no_leak excludes cluster_number: cluster_number 안전 feature처럼 기재되지 않음
+- PASS Korean docs hangul count: session_cluster.txt=667; method_registry.md=745; m2_pipeline.md=206; m2_model_notes.md=137; m2_eval_plan.md=129; parameter_rationale.md=33; base_pred_info.txt=392; interval_anomaly.txt=104; load_policy.txt=115; plot_guide.txt=354
+- PASS handoff README/MANIFEST file list consistency: missing=[]; unexpected=[]; stale_mentions=[]
+- PASS handoff banned claim phrases absent: found=[]
+- PASS Korean handoff zip exists: 최종_전달용_필수자료.zip=True
+- PASS English handoff alias absent: df_required_handoff.zip=False
+- PASS final handoff zip exact 6 files: count=6, extra=[], missing=[]
+- PASS final handoff zip forbidden files absent: bad=[]
+- PASS handoff-only packaging does not require full archive: 전체_분석자료_Method2.zip=True, df_m2.zip=True
+- PASS out/handoff vs extracted final zip hash: df_required_handoff/txt/session_cluster.txt=5fd1ec035ab6; df_required_handoff/img/04_cluster_session.png=66a8b29a5d89; df_required_handoff/csv/minute_all.csv=aef7df9d0cad; df_required_handoff/csv/minute_model.csv=330a095f940e; df_required_handoff/csv/session_summary_processed.csv=d0f94974a45e; df_required_handoff/code/make_session_summary.py=2c69b2c4e0b6
+
+## 해석 제한
+- 최종 표현은 확정 탐지가 아니라 viewer-chat mismatch 기반 수동 검토 우선순위 생성이다.
+- cluster_number, minute_cluster, rra_q, empirical_p, review_order는 정답 라벨이나 확률이 아니다.

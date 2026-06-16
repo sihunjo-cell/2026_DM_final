@@ -1,0 +1,75 @@
+분 단위 행동 상태 군집 문서
+========================
+
+분석 단위: 1분 row.
+세션 정의: run_id + broad_no.
+목적: viewer 규모 대비 chat/unique 반응 부족과 zero-chat 지속성을 비지도 방식으로 요약한 분 단위 행동 상태 번호를 만든다.
+주의: minute_cluster는 정답 라벨이나 확률이 아니라 행동 상태 번호다.
+
+사용 feature 목록:
+- log_viewer
+- chat_deficit
+- unique_deficit
+- rolling_chat_deficit_5m
+- log_zero_run_len
+- rolling_zero_rate_5m
+
+feature 생성 방식:
+- log_viewer = log1p(viewer_count_last): viewer 규모 요약.
+- chat_deficit = expected_log_chat_bin - log_chat: viewer scale 대비 chat 부족.
+- unique_deficit = expected_log_unique_bin - log_unique: viewer scale 대비 unique chatter 부족.
+- rolling_chat_deficit_5m: 최근 5분 chat_deficit 평균.
+- log_zero_run_len = log1p(clock-gap-aware zero_run_len): zero-chat 지속성.
+- rolling_zero_rate_5m: 최근 5분 zero_chat 비율.
+
+스케일링:
+- 적용: 적용
+- 사용 방식: RobustScaler
+- 선택 이유: viewer/chat 계열 변수의 heavy-tail과 극단값 영향을 줄이기 위해 중앙값/IQR 기반 스케일링을 사용한다.
+
+사용한 clustering 알고리즘:
+- KMeans: 전체 1분 row에 재현 가능한 행동 상태 번호를 붙이는 최종 후보.
+- GMM: component 기반 하위 구조와 BIC/AIC 진단.
+- HDBSCAN: 밀도 기반 안정 군집과 noise 비중 진단. noise는 이상치 확정이 아니라 안정 군집에 속하지 않은 분 단위 상태다.
+
+후보 하이퍼파라미터:
+- KMeans K 후보: 2..8
+- KMeans random_state: 42
+- KMeans n_init: 50
+- GMM n_components 후보: 2..8
+- HDBSCAN min_cluster_size 후보: [5, 8, 10]
+
+최종 선택:
+- 최종 선택 알고리즘: KMeans
+- 최종 선택 하이퍼파라미터: k=2
+- 실제 minute_cluster unique count: 2
+- 최종 선택 근거: 동일 feature와 동일 스케일링 조건에서 silhouette, Calinski-Harabasz, Davies-Bouldin, 군집 크기 균형, profile 분리도, seed 안정성을 방향에 맞춘 percentile rank로 변환한 composite selection_score를 사용했다.
+- GMM은 하위 구조 진단에는 유용하지만 component 해석과 handoff 상태 번호 재현성이 KMeans보다 낮아 최종 상태 번호로 쓰지 않았다.
+- HDBSCAN은 안정 군집과 noise 비중 확인에는 유용하지만 noise 처리 때문에 모든 1분 row에 일관된 상태 번호를 붙이기 어려워 최종 상태 번호로 쓰지 않았다.
+
+모델 선택 표 요약:
+- KMeans k=2: final=True, silhouette=0.37104636410136865; Calinski-Harabasz=145203.66617853488; Davies-Bouldin=1.049751018152746, cluster_size_balance=0.6276046374533307; cluster_profile_separation=1.7812486148818876, random_seed_stability=0.9977156855104854; selection_score=0.8333333333333334
+- KMeans k=3: final=False, silhouette=0.29871337265551734; Calinski-Harabasz=121054.25297396403; Davies-Bouldin=1.1136737557981606, cluster_size_balance=0.6264998403211826; cluster_profile_separation=1.7560749697344946, random_seed_stability=0.9937904410740902; selection_score=0.5476190476190476
+- KMeans k=4: final=False, silhouette=0.30102210102530924; Calinski-Harabasz=122099.44132194236; Davies-Bouldin=1.0174918826233723, cluster_size_balance=0.4853760944642678; cluster_profile_separation=1.91333844484723, random_seed_stability=0.9967030697958711; selection_score=0.7857142857142857
+- KMeans k=5: final=False, silhouette=0.28935384681740445; Calinski-Harabasz=115410.13632493425; Davies-Bouldin=1.0535994809788, cluster_size_balance=0.2292170974607249; cluster_profile_separation=2.1263692319816005, random_seed_stability=0.990580673564324; selection_score=0.5476190476190476
+- KMeans k=6: final=False, silhouette=0.26772165564235184; Calinski-Harabasz=108556.86400854499; Davies-Bouldin=1.0666023675956122, cluster_size_balance=0.27431534258969276; cluster_profile_separation=2.0266158502985254, random_seed_stability=0.9754303405237983; selection_score=0.4047619047619047
+- KMeans k=7: final=False, silhouette=0.2691689741454585; Calinski-Harabasz=106184.91626456354; Davies-Bouldin=1.0628312810991705, cluster_size_balance=0.22011694340296376; cluster_profile_separation=2.223602685986114, random_seed_stability=0.9577754540996218; selection_score=0.38095238095238093
+- KMeans k=8: final=False, silhouette=0.2703641710853094; Calinski-Harabasz=104089.71550887212; Davies-Bouldin=1.0243146235121674, cluster_size_balance=0.2333064974426975; cluster_profile_separation=2.1333503675759844, random_seed_stability=0.9742656718036459; selection_score=0.49999999999999994
+- GMM n_components=2: final=False, BIC=-818470.2124331334, AIC=-818955.3002387759, best_BIC=-917194.5378534077
+- GMM n_components=3: final=False, BIC=-879224.4827049949, AIC=-879956.5243026009, best_BIC=-917194.5378534077
+- GMM n_components=4: final=False, BIC=-885243.518740461, AIC=-886222.5141300305, best_BIC=-917194.5378534077
+- GMM n_components=5: final=False, BIC=-905978.8559083038, AIC=-907204.8050898368, best_BIC=-917194.5378534077
+- GMM n_components=6: final=False, BIC=-912111.2362527008, AIC=-913584.1392261973, best_BIC=-917194.5378534077
+- GMM n_components=7: final=False, BIC=-917194.5378534077, AIC=-918914.3946188677, best_BIC=-917194.5378534077
+- GMM n_components=8: final=False, BIC=-914164.5543026678, AIC=-916131.3648600914, best_BIC=-917194.5378534077
+- HDBSCAN min_cluster_size=5: final=False, n_clusters=18, noise_share=0.0117, coverage=0.9883
+- HDBSCAN min_cluster_size=8: final=False, n_clusters=9, noise_share=0.013, coverage=0.987
+- HDBSCAN min_cluster_size=10: final=False, n_clusters=9, noise_share=0.0186, coverage=0.9814
+
+cluster 번호별 profile 요약:
+- cluster_id=0, 해석=viewer 대비 채팅 반응 약한 상태, n=79847, share=0.3856001777159635, viewer_med=542.0, chat_med=5.0, unique_med=4.0, chat_deficit_med=0.9808292530117262, unique_deficit_med=0.8383291904044432, zero_chat_rate=0.1340689067842248, rolling_zero_rate_5m_p90=0.4, cluster_mismatch_rank=0.9583333333333334
+- cluster_id=1, 해석=채팅 반응 활발 상태, n=127225, share=0.6143998222840364, viewer_med=612.0, chat_med=35.0, unique_med=21.0, chat_deficit_med=-0.4924764850977938, unique_deficit_med=-0.4054651081081644, zero_chat_rate=0.0, rolling_zero_rate_5m_p90=0.0, cluster_mismatch_rank=0.5416666666666666
+
+해석 제한:
+- viewer 대비 채팅 반응 약한 상태는 확정 판정이 아니라 비지도 군집 profile 해석이다.
+- cluster_mismatch_rank는 분 단위 mismatch 신호 profile을 설명하기 위한 보조 순위 값이다.

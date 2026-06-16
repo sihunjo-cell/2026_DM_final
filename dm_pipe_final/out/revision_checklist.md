@@ -1,0 +1,66 @@
+# Revision Checklist
+
+최종 제출 가능
+
+- [PASS] strict raw minute columns: minute_all=['source_file', 'run_id', 'broad_no', 'session_key', 'user_id', 'category_id', 'minute_ts', 'viewer_count_last', 'chat_count', 'unique_chatters']; minute_model=['source_file', 'run_id', 'broad_no', 'session_key', 'user_id', 'category_id', 'minute_ts', 'viewer_count_last', 'chat_count', 'unique_chatters']
+- [PASS] required columns: minute_all missing=none; minute_model missing=none; session_summary_processed missing=none
+- [PASS] duplicate key count: minute_all=0, minute_model=0
+- [PASS] negative viewer/chat/unique count: negative_total=0
+- [PASS] chat_count < unique_chatters count: minute_all=0, minute_model=0
+- [PASS] clock gaps >1 minute count: minute_all=634, minute_model=458
+- [PASS] session zrun_max gap-aware: compared=1954, missing=0, mismatched=0
+- [PASS] minute_state zero_run_len gap-aware: mismatched_rows=0, rows=207072
+- [PASS] interval_max_zero_run gap-aware: checked=1997, mismatched_intervals=0
+- [PASS] standalone rebuild value-level match: value-level match rows=1954 cols=21
+- [PASS] leakage absence: raw=none; session=none
+- [PASS] cluster_number exists: columns=['run_id', 'broad_no', 'session_key', 'user_id', 'category_id', 'n', 'start', 'end', 'viewer_med', 'viewer_max', 'chat_mean', 'unique_mean', 'zero_rate', 'zrun_max', 'gap_med', 'gap_max', 'log_viewer', 'log_chat', 'log_unique', 'log_zrun', 'cluster_number']
+- [PASS] cluster_select selected=True row count: selected_count=1; selected_k=2; status=ok
+- [PASS] session K consistency: selected_k=2; actual_unique=2; txt_k=2
+- [PASS] mc_select KMeans selected=True row count: selected_count=1; selected_k=2; status=ok
+- [PASS] minute K consistency: selected_k=2; actual_unique=2; txt_k=2; model_selection_k=2; model_selection_count=1
+- [PASS] minute cluster model selection table: columns_missing=[]; selected_final_count=1; algorithms=['GMM', 'HDBSCAN', 'KMeans']
+- [PASS] m2_review threshold caution flags absent: present=[]
+- [PASS] m2_review order uses family consensus: review_order의 1차 정렬 근거가 family_consensus_score 및 family RRA인지 확인
+- [PASS] raw scan evidence not duplicated in final RRA: scan_interval/empirical_p/scan_strength are represented by scan_family_rank
+- [PASS] family rank columns present: missing=[]
+- [PASS] family_consensus_score present: 
+- [PASS] raw_rra_q preserved for audit: 
+- [PASS] m2_review_rank_audit.csv exists: 
+- [PASS] m2_review forbidden columns absent: forbidden_present=[]
+- [PASS] m2_state transition_count actual state changes: source=m2_scores.csv; checked=1997; mismatched_sessions=0
+- [PASS] transition_count not fixed adjacent-pair count: transition_count_equals_n_minutes_minus_1_for_all_sessions=False
+- [PASS] synthetic sanity summary exists/status: status=not_run; reason=synthetic_sanity_disabled_or_not_scored; missing_cols=[]
+- [PASS] synthetic sanity not_run metrics blank: status=not_run; recovered_rate=not reported
+- [PASS] synthetic sanity ok metrics valid: status=not_run; recovered_rate=not reported; matches_ok=True
+- [PASS] qc_zero_session_review exists/schema: missing_cols=[]
+- [PASS] qc_zero_session_review session count matches qc_zero.csv: qc_zero_sessions=95; review_sessions=95
+- [PASS] qc_zero_session_review all-zero content: all_zero_chat=True; total_chat_zero=True
+- [PASS] qc_zero_session_review excluded from behavior/session handoff: minute_model_overlap=[]; session_summary_overlap=[]
+- [PASS] qc_zero_session_review qc_reason avoids forbidden certainty terms: qc_reason is manual-QC wording only
+- [PASS] legacy episode grid disabled outputs absent: m2_ep.csv=False, m2_sens.csv=False, m2_candidates.csv=False, m2_eval.csv=False, m2_stability.csv=False
+- [PASS] 07 stability plot uses mc_stab: minute KMeans behavior-state stability diagnostic; mc_stab.csv 및 backward-compatible plot filename 존재
+- [PASS] plot_manifest matches actual plots: actual=['plots/01_data_quality.png', 'plots/02_dist_time.png', 'plots/03_view_chat.png', 'plots/04_cluster_session.png', 'plots/05_session_k_selection.png', 'plots/06_session_cluster_profile.png', 'plots/07_ms.png', 'plots/07_session_cluster_stability.png', 'plots/08_cluster_minute.png', 'plots/08_mc.png', 'plots/13_m2_pipe.png', 'plots/15_null.png', 'plots/16_state.png', 'plots/18_review.png', 'plots/19_reason.png', 'plots/20_rra.png', 'plots/21_interval.png', 'plots/22_family_ablation_heatmap.png', 'plots/23_aggregation_sensitivity.png', 'plots/24_evidence_balance.png', 'plots/25_minute_signal_sensitivity.png', 'plots/26_synthetic_interval_recovery.png']; manifest=['plots/01_data_quality.png', 'plots/02_dist_time.png', 'plots/03_view_chat.png', 'plots/04_cluster_session.png', 'plots/05_session_k_selection.png', 'plots/06_session_cluster_profile.png', 'plots/07_ms.png', 'plots/07_session_cluster_stability.png', 'plots/08_cluster_minute.png', 'plots/08_mc.png', 'plots/13_m2_pipe.png', 'plots/15_null.png', 'plots/16_state.png', 'plots/18_review.png', 'plots/19_reason.png', 'plots/20_rra.png', 'plots/21_interval.png', 'plots/22_family_ablation_heatmap.png', 'plots/23_aggregation_sensitivity.png', 'plots/24_evidence_balance.png', 'plots/25_minute_signal_sensitivity.png', 'plots/26_synthetic_interval_recovery.png']; stale_plot_mentions=[]
+- [PASS] plot_audit exists: 
+- [PASS] 04_cluster_session uses discrete legend for cluster_number: cluster_count=2; legend_count=2
+- [PASS] 04_cluster_session has no cluster_number colorbar: 
+- [PASS] 05_session_k_selection shows selection_score: 
+- [PASS] 05_session_k_selection does not present inertia as selection criterion: 
+- [PASS] 06/08 heatmap colorbars labeled as scaled profile values, not cluster ids: 
+- [PASS] 19_reason uses text_reason_included counts: 
+- [PASS] 20_rra labels limited to top candidates: 
+- [PASS] 21_interval uses one shared colorbar: 
+- [PASS] parameter_rationale.md exists: 
+- [PASS] cfg parameters documented in parameter_rationale.md: missing=[]
+- [PASS] parameter_rationale.md avoids certainty wording: forbidden=[]
+- [PASS] method_registry exists/status: hangul=745
+- [PASS] cluster_number leakage warning: X_core_cols.txt warning 확인
+- [PASS] X_no_leak excludes cluster_number: cluster_number 안전 feature처럼 기재되지 않음
+- [PASS] Korean docs hangul count: session_cluster.txt=667; method_registry.md=745; m2_pipeline.md=206; m2_model_notes.md=137; m2_eval_plan.md=129; parameter_rationale.md=33; base_pred_info.txt=392; interval_anomaly.txt=104; load_policy.txt=115; plot_guide.txt=354
+- [PASS] handoff README/MANIFEST file list consistency: missing=[]; unexpected=[]; stale_mentions=[]
+- [PASS] handoff banned claim phrases absent: found=[]
+- [PASS] Korean handoff zip exists: 최종_전달용_필수자료.zip=True
+- [PASS] English handoff alias absent: df_required_handoff.zip=False
+- [PASS] final handoff zip exact 6 files: count=6, extra=[], missing=[]
+- [PASS] final handoff zip forbidden files absent: bad=[]
+- [PASS] handoff-only packaging does not require full archive: 전체_분석자료_Method2.zip=True, df_m2.zip=True
+- [PASS] out/handoff vs extracted final zip hash: df_required_handoff/txt/session_cluster.txt=5fd1ec035ab6; df_required_handoff/img/04_cluster_session.png=66a8b29a5d89; df_required_handoff/csv/minute_all.csv=aef7df9d0cad; df_required_handoff/csv/minute_model.csv=330a095f940e; df_required_handoff/csv/session_summary_processed.csv=d0f94974a45e; df_required_handoff/code/make_session_summary.py=2c69b2c4e0b6

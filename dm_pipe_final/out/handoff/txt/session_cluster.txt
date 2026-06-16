@@ -1,0 +1,86 @@
+세션 행동 군집 문서
+==================
+
+분석 단위: 방송 세션.
+세션 정의: run_id + broad_no.
+목적: session_summary_processed.csv에 세션 행동 군집 번호를 붙이기 위한 비지도 clustering이다.
+주의: cluster_number는 정답 라벨이나 확률이 아니라 세션 행동 군집 번호다.
+
+session_summary_processed.csv 생성 방식:
+- minute_model.csv의 1분 row를 run_id + broad_no 단위로 집계한다.
+- min_n은 의심 기준이 아니라 세션 요약 통계 안정성을 위한 최소 관측 길이다.
+- all-zero-chat session은 QC bucket으로 보존하되 세션 행동 군집 학습에서는 제외한다.
+
+사용 feature와 근거:
+- log_viewer: viewer 규모가 heavy-tail이므로 log1p로 요약한다.
+- log_chat: chat 규모를 log1p로 요약한다.
+- log_unique: unique chatter 규모를 log1p로 요약한다.
+- zero_rate: session 내 chat=0 minute 비율이다.
+- gap_med: log1p(viewer_count_last) - log1p(chat_count)의 session median으로 viewer 대비 chat 반응 약화를 요약한다.
+- log_zrun: clock-contiguous zero-chat persistence를 log1p로 요약한다.
+viewer와 chat은 규모 수준에서는 양의 관계가 있지만 minute-level delta response는 약하므로 단순 delta보다 session-level gap과 zero-chat persistence를 사용한다.
+
+실제 feature 목록:
+- log_viewer
+- log_chat
+- log_unique
+- zero_rate
+- log_zrun
+- gap_med
+- gap_max
+
+스케일링:
+- 적용: 적용
+- 사용 방식: RobustScaler
+- 선택 이유: viewer/chat 계열 변수의 heavy-tail과 극단값 영향을 줄이기 위해 중앙값/IQR 기반 스케일링을 사용한다.
+
+사용한 clustering 알고리즘:
+- KMeans: 최종 cluster_number 후보.
+- GMM: component 기반 하위 구조 진단.
+- HDBSCAN: 밀도 기반 안정 군집과 noise 비중 진단. noise는 이상치 확정이 아니라 안정 군집에 속하지 않은 세션 상태다.
+
+후보 하이퍼파라미터:
+- KMeans K 후보: 2..6
+- random_state=42
+- n_init=50
+- GMM n_components 후보: 2..6
+- HDBSCAN min_cluster_size 후보: [5, 8, 10]
+- min_n=10
+- clock_gap_reset_min=1.1
+
+최종 선택:
+- 최종 선택 알고리즘: KMeans
+- 최종 선택 K: 2
+- 실제 cluster_number unique count: 2
+- 선택 근거: silhouette, Calinski-Harabasz, Davies-Bouldin, 군집 크기 균형, 군집 profile 분리도를 방향에 맞춘 percentile rank로 변환한 composite selection_score를 사용했다.
+- GMM은 하위 구조 진단에는 유용하지만 최종 세션 행동 군집 번호로는 KMeans보다 설명과 재현이 어렵다.
+- HDBSCAN은 밀도 기반 안정 군집 확인에는 유용하지만 noise 처리 때문에 handoff용 전체 세션 번호로 쓰기 어렵다.
+
+결측 처리 정책:
+- viewer_count_last: standalone rebuild에서 minute_ts 정렬 후 run_id + broad_no 내부 ffill/bfill을 먼저 적용하고 남은 결측은 0으로 채운다.
+- chat_count / unique_chatters: chat event가 관측되지 않은 minute은 0으로 볼 수 있으므로 0 fill한다.
+- 원본 결측 row 수와 ffill/bfill 이후 잔여 결측 row 수는 validation_report와 standalone report에 남긴다.
+
+Zero-run clock gap 정책:
+- 같은 run_id + broad_no 내부에서도 minute_ts.diff() > 1.1분이면 zero-chat run을 reset한다.
+- zrun_max는 clock-contiguous zero-chat segment의 최대 길이이다.
+
+min_n 전/후 session 수:
+- min_n filter 전: 1997
+- min_n filter 후: 1954
+
+K 후보별 평가:
+- k=2, silhouette=0.78681117, Calinski-Harabasz=3316.3664, Davies-Bouldin=0.46768696, size_balance=0.060227889, profile_separation=14.680895, selection_score=0.96, selected=True
+- k=3, silhouette=0.6176053, Calinski-Harabasz=3240.7519, Davies-Bouldin=0.61722423, size_balance=0.038852361, profile_separation=12.293373, selection_score=0.68, selected=False
+- k=4, silhouette=0.55332148, Calinski-Harabasz=2978.6527, Davies-Bouldin=0.62534389, size_balance=0.014879107, profile_separation=15.111849, selection_score=0.52, selected=False
+- k=5, silhouette=0.33923788, Calinski-Harabasz=2996.7448, Davies-Bouldin=0.83846499, size_balance=0.021220159, profile_separation=13.641897, selection_score=0.4, selected=False
+- k=6, silhouette=0.32528349, Calinski-Harabasz=3082.3038, Davies-Bouldin=0.83759587, size_balance=0.034285714, profile_separation=12.585425, selection_score=0.44, selected=False
+
+cluster_number별 profile 요약:
+- cluster_number=0, 해석=상대적으로 채팅 반응이 활발하거나 혼합된 세션 행동 군집, n=1843, viewer_med=601.5, chat_mean=51.87, unique_mean=28.72, zero_rate=0.02405, gap_med=3.375, zrun_max=0
+- cluster_number=1, 해석=viewer 대비 채팅 반응 약한 세션 행동 군집, n=111, viewer_med=161, chat_mean=2.117, unique_mean=1.408, zero_rate=0.5088, gap_med=4.592, zrun_max=8
+
+주의 문구:
+- viewer 대비 채팅 반응이 약한 profile 해석은 TXT에만 적고 CSV 컬럼으로 넣지 않는다.
+- all-zero-chat session은 QC bucket 후보이며 KMeans cluster_number를 부여하지 않는다.
+- 운영 판단은 raw WebSocket/chat QC와 수동 검토 없이는 불가하다.

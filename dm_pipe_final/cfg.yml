@@ -1,0 +1,293 @@
+path:
+  in_dir: data/features
+  pattern: "Run_*_Features.xlsx"
+  out_dir: out
+  label_file: data/labels/manual_labels.csv
+
+time:
+  shift_hours: 9
+  drop_runs: []
+  drop_off_window: true
+  # Data-cleaning tolerance, not a viewbot threshold.
+  # If at most 0.5% of rows in a file fall just outside the selected valid
+  # window, treat them as boundary overrun rows and trim only those rows.
+  # If off_window_rate is larger, treat the file as wrong-window collection
+  # and drop the whole file. Keep drop_off_window true.
+  off_window_max_rate: 0.005
+  trim_off_window_rows: true
+  valid_windows: ["15:00-17:00", "17:00-19:00", "20:00-22:00", "23:00-01:00"]
+  tolerance_min: 1
+
+prep:
+  min_n: 10
+  clock_gap_reset_min: 1.1
+  zero_viewer_na: true
+
+cluster:
+  scaler: RobustScaler
+  k_min: 2
+  k_max: 6
+  seed: 42
+  n_init: 50
+
+hdbscan:
+  min_sizes: [5, 8, 10]
+
+detector:
+  contam: 0.05
+  seed: 42
+
+synthetic:
+  seed: 42
+  n_per_type: 50
+
+model:
+  seed: 42
+  test_size: 0.25
+
+task:
+  actual_label_available: false
+  method_id: 2
+  method_name: minute_level_mismatch_candidate_generator
+  goal: "Find minute-level viewer-chat mismatch intervals and summarize candidate sessions."
+  non_goal:
+    - true_viewbot_classification
+    - session_level_method3_modeling
+    - auc_roc_without_ground_truth
+
+minute_state:
+  viewer_bin_n: 10
+  rolling_windows: [5, 10]
+  features:
+    - log_viewer
+    - log_chat
+    - log_unique
+    - viewer_bin
+    - chat_deficit
+    - unique_deficit
+    - zero_run_len
+    - rolling_chat_deficit_5m
+    - rolling_zero_rate_5m
+
+minute_cluster:
+  scaler: RobustScaler
+  diagnostic_sample_size: 50000
+  diagnostic_seed: 42
+  kmeans:
+    enabled: true
+    k_min: 2
+    k_max: 8
+    seed: 42
+    n_init: 50
+    sample_size_for_silhouette: 10000
+  gmm:
+    enabled: true
+    n_min: 2
+    n_max: 8
+    seed: 42
+    covariance_type: full
+    note: "Structural diagnostic only, not a label source."
+  hdbscan:
+    enabled: true
+    min_sizes: [5, 8, 10]
+    diagnostic_sample_size: 10000
+    note: "Structural diagnostic only. Skip if HDBSCAN is unavailable."
+  features:
+    - log_viewer
+    - chat_deficit
+    - unique_deficit
+    - rolling_chat_deficit_5m
+    - log_zero_run_len
+    - rolling_zero_rate_5m
+
+minute_score:
+  signals:
+    - chat_deficit
+    - unique_deficit
+    - rolling_chat_deficit_5m
+    - zero_run_len
+    - rolling_zero_rate_5m
+    - cluster_mismatch_rank
+  rank_method: percentile
+  combine_method: equal_weight_rank_mean
+  note: "Review index only, not probability."
+
+minute_ml:
+  enabled: false
+  note: "Disabled in final Method 2 handoff. Session/detector modeling belongs to Method 3 or optional appendix, not Method 2."
+
+m2_window:
+  enabled: false
+  window_size: [5, 10, 20]
+  discord_window_size: [10, 20]
+  discord_max_sessions: 50
+  episode_top_rank_q: 0.90
+  lof_max_rows: 50000
+  note: "Fixed window grid is not used for final review selection."
+
+episode_grid:
+  enabled: false
+  score_quantiles: [0.90, 0.95, 0.97, 0.99]
+  min_duration_grid: [1, 2, 3, 5, 10]
+  merge_gap_min: 1
+  selection_policy: grid_only_no_single_final_threshold
+  note: "Legacy sensitivity only. Not used for final review selection."
+
+synthetic_sanity:
+  enabled: false
+  match_iou_threshold: 0.5
+  topk: [10, 50, 100]
+  note: "Disabled unless synthetic sessions are passed through the same Method2 scoring/scan/review pipeline."
+
+m2_scan:
+  enabled: true
+  n_perm: 200
+  break_on_clock_gap_min: 1.1
+  eps_policy: "1/(n_minutes_total+1)"
+  max_scan_n: 500
+  statistic: "sum_z_over_sqrt_len"
+  pvalue_note: "empirical permutation p-value; min resolution is 1/(n_perm+1) = 1/201 when n_perm=200"
+
+m2_expected_response:
+  max_train_rows_per_fold: 200000
+  seed: 42
+
+m2_interval_anomaly:
+  enabled: true
+  scaler: RobustScaler
+  prefer_ecod: true
+  iforest:
+    n_estimators: 200
+    max_samples: auto
+    contamination: auto
+    random_state: 42
+
+m2_review:
+  aggregation: equal_weight_family_consensus_plus_family_rra
+  use_weighted_average: false
+  min_n_from_prep: true
+  include_ineligible_in_final_review: false
+  write_all_review_file: true
+  reason_support_min_rank: null
+  use_thresholded_reason_count_in_rra: false
+
+m2_eval:
+  true_label_available: false
+  report_auc_roc: false
+  null_perm: 100
+  stability_seeds: 10
+  stability_sample_size: 50000
+  metrics:
+    - candidate_volume
+    - score_distribution
+    - threshold_sensitivity
+    - episode_duration_distribution
+    - cluster_profile
+    - temporal_stability
+    - null_persistence
+    - state_transition_dwell
+    - cluster_stability
+    - synthetic_sanity_if_available
+
+eval_robustness:
+  enabled: true
+  out_dir: out/eval
+  topk: [20, 50, 100, 200]
+  rank_corr_top_n: 500
+  strong_family_strength_threshold: 0.90
+
+  run_family_ablation: true
+  run_aggregation_sensitivity: true
+  run_evidence_balance: true
+  run_tie_audit: true
+  run_minute_signal_sensitivity: true
+  run_synthetic_interval_recovery: true
+
+  families:
+    - scan_family_rank
+    - persistence_family_rank
+    - expected_response_family_rank
+    - minute_state_family_rank
+    - interval_anomaly_family_rank
+    - reason_support_family_rank
+
+  minute_score_signals:
+    - chat_deficit
+    - unique_deficit
+    - rolling_chat_deficit_5m
+    - zero_run_len
+    - rolling_zero_rate_5m
+    - cluster_mismatch_rank
+
+  signal_weight_variants:
+    equal_weight_main:
+      chat_deficit: 1
+      unique_deficit: 1
+      rolling_chat_deficit_5m: 1
+      zero_run_len: 1
+      rolling_zero_rate_5m: 1
+      cluster_mismatch_rank: 1
+    no_kmeans_state:
+      chat_deficit: 1
+      unique_deficit: 1
+      rolling_chat_deficit_5m: 1
+      zero_run_len: 1
+      rolling_zero_rate_5m: 1
+      cluster_mismatch_rank: 0
+    deficit_only:
+      chat_deficit: 1
+      unique_deficit: 1
+      rolling_chat_deficit_5m: 1
+      zero_run_len: 0
+      rolling_zero_rate_5m: 0
+      cluster_mismatch_rank: 0
+    persistence_only:
+      chat_deficit: 0
+      unique_deficit: 0
+      rolling_chat_deficit_5m: 1
+      zero_run_len: 1
+      rolling_zero_rate_5m: 1
+      cluster_mismatch_rank: 0
+    downweight_cluster:
+      chat_deficit: 1
+      unique_deficit: 1
+      rolling_chat_deficit_5m: 1
+      zero_run_len: 1
+      rolling_zero_rate_5m: 1
+      cluster_mismatch_rank: 0.5
+    downweight_zero_ties:
+      chat_deficit: 1
+      unique_deficit: 1
+      rolling_chat_deficit_5m: 1
+      zero_run_len: 0.5
+      rolling_zero_rate_5m: 0.5
+      cluster_mismatch_rank: 1
+
+  synthetic:
+    external_minutes_csv: data/synthetic/synthetic_many_minutes.csv
+    external_intervals_csv: data/synthetic/synthetic_many_intervals.csv
+    iou_thresholds: [0.3, 0.5, 0.7]
+    keep_intermediate: false
+
+docs:
+  write_task_definition: true
+  write_data_dictionary: true
+  write_modeling_handoff: true
+  write_pipeline_definition: true
+
+handoff:
+  keep_required_handoff: true
+  include_session_modeling: false
+  include_method3_comparison: false
+  write_package: true
+  preserve_raw_cluster_id: true
+  add_cluster_interpretation: true
+  cluster_number_semantics: "세션 행동 군집 번호이며 정답 라벨이나 확률이 아님"
+  raw_minute_files:
+    - minute_all.csv
+    - minute_model.csv
+  feature_minute_files:
+    - minute_all_feat.csv
+    - minute_model_feat.csv
+  session_file: session_summary_processed.csv
+  x_core_file: X_core_cols.txt

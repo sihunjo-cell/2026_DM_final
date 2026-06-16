@@ -1,0 +1,11 @@
+# interval anomaly support 근거
+
+목적: adaptive scan으로 찾은 top interval의 profile이 전체 interval 분포에서 이질적인지 보는 보조 evidence이다.
+final label source가 아니며 anomaly score는 label/probability가 아니다.
+사용 feature: top_interval_duration, interval_mean_rank, interval_p95_rank, interval_chat_deficit_mean, interval_unique_deficit_mean, interval_model_chat_deficit_mean, interval_model_unique_deficit_mean, interval_zero_rate, interval_max_zero_run, interval_mismatch_state_rate
+preprocessing: median imputation 후 all-missing column은 0으로 채운다.
+scaler: RobustScaler; heavy-tail interval feature의 extreme value 영향을 줄이기 위해 사용한다.
+IsolationForest: n_estimators=200, max_samples=auto, contamination=auto, random_state=42
+LOF: n_neighbors=min(20, n_sessions - 1), n_sessions >= 25일 때 scaled matrix에 적용한다.
+ECOD: pyod가 사용 가능할 때 scaled matrix에 적용한다.
+주의: 이 support가 short spike를 과도하게 밀어올리면 final RRA에서 제거하거나 appendix diagnostic으로 격리한다.

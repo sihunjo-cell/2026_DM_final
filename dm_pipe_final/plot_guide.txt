@@ -1,0 +1,22 @@
+Plot Guide
+==========
+
+Method 2 plots:
+- 01_data_quality.png: data quality and filtering overview.
+- 02_dist_time.png: minute distribution and time structure.
+- 03_view_chat.png: viewer-chat dynamics.
+- 04_cluster_session.png: session-cluster handoff check, not a Method 2 label.
+- 07_ms.png: Method 2 rule-rank score distribution.
+- 08_mc.png: KMeans minute cluster profile.
+- 10_sens.png: threshold-grid sensitivity.
+- 11_ep.png: example Method 2 episodes.
+- 12_m2_rank.png: candidate-session ranking metrics.
+- 13_m2_pipe.png: Method 2 pipeline overview.
+- 15_null.png: observed episode persistence compared with shuffled within-session null.
+- 16_state.png: minute cluster state transition and dwell-time diagnostics.
+- 17_mc_stab.png: KMeans minute cluster stability across seeds/subsamples.
+
+Notes:
+- Threshold quantiles and durations are a sensitivity grid, not selected truth cutoffs.
+- Plots 15, 16, and 17 are no-label diagnostics, not viewbot performance metrics.
+- Detector/model comparison plots are not part of the final Method 2 handoff.

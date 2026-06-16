@@ -1,0 +1,12 @@
+# expected-response baseline 근거
+
+목적: viewer scale, category, hour, session minute position을 고려했을 때 기대되는 chat/unique 수준을 추정한다.
+이 절차는 classifier가 아니며 정답 라벨을 사용하지 않는다.
+알고리즘: HistGradientBoostingRegressor(loss='quantile', quantile=0.5, random_state=42).
+fallback 모델: GradientBoostingRegressor(loss='quantile', alpha=0.5, random_state=42); 주 estimator 사용이 불가능할 때만 사용한다.
+validation: GroupKFold by run_id를 우선 사용하여 같은 run_id가 train/test에 동시에 들어가는 leakage를 줄인다.
+chat fit: GroupKFold by run_id, n_splits=5.
+unique fit: GroupKFold by run_id, n_splits=5.
+사용 feature: log_viewer, viewer_bin, minute_idx_norm, hour, category_007 퍼스트 라이트, category_OTHER_CAT, category_PUBG: 배틀그라운드, category_UNKNOWN_CATEGORY, category_V 라이징, category_talk, category_갬블 위드 유어 프렌즈, category_검은사막, category_겟 투 워크, category_그림/아트, category_던전앤파이터, category_데드 바이 데이라이트, category_디렉티브 8020, category_로스트아크, category_리그 오브 레전드, category_림버스 컴퍼니, category_림월드, category_마인크래프트, category_먹방/쿡방, category_메이플스토리, category_메이플스토리 월드, category_명조:워더링 웨이브, category_발로란트, category_블루 아카이브, category_서브노티카 2, category_스타크래프트 : 리마스터, category_슬레이 더 스파이어 2, category_승리의 여신: 니케, category_아이온2, category_야구, category_엑스컴 2, category_오버워치, category_왕좌의 게임: 킹스로드, category_월드 오브 워크래프트: 한밤, category_음악/노래, category_이스케이프 프롬 타르코프, category_이터널 리턴, category_이환, category_전략적 팀 전투 : 우주의 신들, category_종합 게임, category_철권 8, category_팀파이트 매니저 2, category_파이널판타지14, category_패스 오브 엑자일 2, category_포켓몬 챔피언스, category_프래그마타, category_프랫폴, category_하스스톤, category_하츠 오브 아이언 4, category_활협전, category_히어로즈 오브 더 스톰
+출력: base_log_chat_q50, base_log_unique_q50, model_chat_deficit, model_unique_deficit.
+한계: 실제 정답 라벨이 없는 baseline이다. deficit은 수동 검토 근거이며 확률이 아니다.

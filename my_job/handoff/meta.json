@@ -1,0 +1,18 @@
+{
+  "main_file": "minute_model.csv",
+  "all_file": "minute_all.csv",
+  "qc_file": "qc_zero.csv",
+  "session_file": "session_all.csv",
+  "unit": {
+    "minute_row": "run_id + broad_no + minute_ts",
+    "session": "run_id + broad_no"
+  },
+  "notes": [
+    "minute_model.csv excludes all-zero chat sessions and is the recommended modeling start file.",
+    "minute_all.csv keeps all rows with is_all_zero_chat_session flag.",
+    "qc_zero.csv stores all-zero chat sessions separately.",
+    "iforest.csv is a review flag table, not ground-truth anomaly labels.",
+    "cluster.csv is a session type table, not bot labels.",
+    "Use session_key-based split to avoid leakage."
+  ]
+}

@@ -1,0 +1,43 @@
+# CHZZK Crawler Automation Schedule (KST time mapped to UTC)
+# KST = UTC + 9 | Server timezone: UTC
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+# ─────────────────────────────────────────────────────────────
+# Afternoon (15:00 - 17:00 KST = 06:00 - 08:00 UTC)
+# ─────────────────────────────────────────────────────────────
+55 5 * * * cd /home/ubuntu/app/chzzk-crawler && source .venv/bin/activate && python scripts/report_status.py --type pre --window afternoon >> /home/ubuntu/app/chzzk-crawler/logs/cron.log 2>&1
+0 6 * * * cd /home/ubuntu/app/chzzk-crawler && source .venv/bin/activate && python build_pool.py && python scripts/setup.py --load-csv top30_targets.csv && python scripts/run_pilot.py --window afternoon --duration 7200 >> /home/ubuntu/app/chzzk-crawler/logs/cron.log 2>&1
+5 8 * * * cd /home/ubuntu/app/chzzk-crawler && source .venv/bin/activate && python scripts/report_status.py --type post --window afternoon >> /home/ubuntu/app/chzzk-crawler/logs/cron.log 2>&1
+
+# ─────────────────────────────────────────────────────────────
+# Evening 1 (17:00 - 19:00 KST = 08:00 - 10:00 UTC)
+# ─────────────────────────────────────────────────────────────
+55 7 * * * cd /home/ubuntu/app/chzzk-crawler && source .venv/bin/activate && python scripts/report_status.py --type pre --window evening1 >> /home/ubuntu/app/chzzk-crawler/logs/cron.log 2>&1
+0 8 * * * cd /home/ubuntu/app/chzzk-crawler && source .venv/bin/activate && python build_pool.py && python scripts/setup.py --load-csv top30_targets.csv && python scripts/run_pilot.py --window evening1 --duration 7200 >> /home/ubuntu/app/chzzk-crawler/logs/cron.log 2>&1
+5 10 * * * cd /home/ubuntu/app/chzzk-crawler && source .venv/bin/activate && python scripts/report_status.py --type post --window evening1 >> /home/ubuntu/app/chzzk-crawler/logs/cron.log 2>&1
+
+# ─────────────────────────────────────────────────────────────
+# Evening 2 (20:00 - 22:00 KST = 11:00 - 13:00 UTC)
+# ─────────────────────────────────────────────────────────────
+55 10 * * * cd /home/ubuntu/app/chzzk-crawler && source .venv/bin/activate && python scripts/report_status.py --type pre --window evening2 >> /home/ubuntu/app/chzzk-crawler/logs/cron.log 2>&1
+0 11 * * * cd /home/ubuntu/app/chzzk-crawler && source .venv/bin/activate && python build_pool.py && python scripts/setup.py --load-csv top30_targets.csv && python scripts/run_pilot.py --window evening2 --duration 7200 >> /home/ubuntu/app/chzzk-crawler/logs/cron.log 2>&1
+5 13 * * * cd /home/ubuntu/app/chzzk-crawler && source .venv/bin/activate && python scripts/report_status.py --type post --window evening2 >> /home/ubuntu/app/chzzk-crawler/logs/cron.log 2>&1
+
+# ─────────────────────────────────────────────────────────────
+# Night (23:00 - 01:00 KST = 14:00 - 16:00 UTC)
+# ─────────────────────────────────────────────────────────────
+55 13 * * * cd /home/ubuntu/app/chzzk-crawler && source .venv/bin/activate && python scripts/report_status.py --type pre --window night >> /home/ubuntu/app/chzzk-crawler/logs/cron.log 2>&1
+0 14 * * * cd /home/ubuntu/app/chzzk-crawler && source .venv/bin/activate && python build_pool.py && python scripts/setup.py --load-csv top30_targets.csv && python scripts/run_pilot.py --window night --duration 7200 >> /home/ubuntu/app/chzzk-crawler/logs/cron.log 2>&1
+5 16 * * * cd /home/ubuntu/app/chzzk-crawler && source .venv/bin/activate && python scripts/report_status.py --type post --window night >> /home/ubuntu/app/chzzk-crawler/logs/cron.log 2>&1
+
+# ─────────────────────────────────────────────────────────────
+# Cleanup: xóa data cũ hơn 7 ngày (05:00 KST = 20:00 UTC hôm trước)
+# Chạy sau khi Night session kết thúc, trước khi Afternoon bắt đầu
+# ─────────────────────────────────────────────────────────────
+0 20 * * * cd /home/ubuntu/app/chzzk-crawler && source .venv/bin/activate && python scripts/cleanup_old_data.py >> /home/ubuntu/app/chzzk-crawler/logs/cleanup.log 2>&1
+
+# ─────────────────────────────────────────────────────────────
+# Watchdog (Every 15 minutes)
+# ─────────────────────────────────────────────────────────────
+*/15 * * * * /bin/bash /home/ubuntu/app/chzzk-crawler/scripts/watchdog.sh >> /home/ubuntu/app/chzzk-crawler/logs/watchdog.log 2>&1

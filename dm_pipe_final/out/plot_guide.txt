@@ -1,0 +1,64 @@
+Plot Guide
+==========
+목적: 각 plot이 어떤 방법론 판단을 보조하는지와 어떤 결론을 낼 수 없는지 명시한다.
+공통 주의: 모든 plot은 viewer-chat mismatch 기반 수동 검토 우선순위 evidence이며 정답 라벨/확률 아님.
+
+Method 2 plots:
+- 01_data_quality.png: 데이터 품질과 필터링 개요; 정답 라벨/확률 아님
+- 02_dist_time.png: minute 분포와 시간 구조 확인; 정답 라벨/확률 아님
+- 03_view_chat.png: viewer-chat 동학 확인; 정답 라벨/확률 아님
+- 04_cluster_session.png: session cluster 산점도; discrete legend for categorical cluster_number; cluster_number는 행동 군집 번호이며 정답 라벨/확률 아님
+- 05_session_k_selection.png: session K 선택 근거; primary metric is composite selection_score, not inertia; not ground-truth label
+- 06_session_cluster_profile.png: cluster profile heatmap; colorbar is within-metric scaled profile value, not cluster id; cluster_number는 행동 군집 번호이며 정답 라벨/확률 아님
+- 07_ms.png: Method 2 rule-rank score 분포; 정답 라벨/확률 아님
+- 07_session_cluster_stability.png: filename retained for backward compatibility; content is minute KMeans behavior-state stability diagnostic from mc_stab.csv ARI/subsample; supervised 성능지표 아님; 정답 라벨/확률 아님
+- 08_cluster_minute.png: alias/duplicate of 08_mc.png for handoff compatibility; colorbar is within-feature scaled profile value, not cluster id; 정답 라벨/확률 아님
+- 08_mc.png: minute KMeans behavior state profile; colorbar is within-feature scaled profile value, not cluster id; 정답 라벨/확률 아님
+- 13_m2_pipe.png: Method 2 pipeline 개요; 정답 라벨/확률 아님
+- 15_null.png: shuffled null diagnostic; 정답 라벨/확률 아님
+- 16_state.png: minute state transition diagnostic; colorbar label is transition share, not cluster count; 정답 라벨/확률 아님
+- 18_review.png: 수동 검토 우선순위 evidence 요약; 정답 라벨/확률 아님
+- 19_reason.png: counts top explanation reasons only; not confidence/lift/prediction rule
+- 20_rra.png: family RRA evidence rank; rra_q=family_rra_q이며 확률 아님; labels show top review candidates only
+- 21_interval.png: interval duration/empirical_p caution 진단; one shared colorbar is family consensus score, not probability
+- 22_family_ablation_heatmap.png: generated plot; alias/diagnostic; 정답 라벨/확률 아님
+- 23_aggregation_sensitivity.png: generated plot; alias/diagnostic; 정답 라벨/확률 아님
+- 24_evidence_balance.png: generated plot; alias/diagnostic; 정답 라벨/확률 아님
+- 25_minute_signal_sensitivity.png: generated plot; alias/diagnostic; 정답 라벨/확률 아님
+- 26_synthetic_interval_recovery.png: generated plot; alias/diagnostic; 정답 라벨/확률 아님
+
+해석 제한:
+- cluster_number와 minute_cluster는 behavior state id이며 정답 라벨/확률 아님.
+- rra_q, family_rra_q, family_consensus_score, empirical_p는 확률이 아니며 수동 검토 우선순위 evidence이다.
+- 04_cluster_session.png uses a discrete legend for categorical cluster_number and no cluster_number colorbar.
+- 05_session_k_selection.png shows composite selection_score as the main selection basis; inertia is not a selection criterion.
+- 06_session_cluster_profile.png colorbar is within-metric scaled profile value, not cluster id.
+- 08_mc.png and 08_cluster_minute.png colorbar is within-feature scaled profile value, not cluster id.
+- 16_state.png colorbar is transition share, not cluster count.
+- 19_reason.png counts top explanation reasons only; not confidence/lift/prediction rule.
+- 21_interval.png uses one shared colorbar for family consensus score, not probability.
+- 07_session_cluster_stability.png 파일명은 backward compatibility를 위해 유지하지만 내용은 mc_stab.csv 기반 minute KMeans behavior-state stability diagnostic이며 supervised 성능지표가 아니다.
+- plot_manifest.csv는 실제 out/plots/*.png 파일만 나열한다. 08_cluster_minute.png는 08_mc.png의 handoff alias/duplicate이다.
+
+- plots/01_data_quality.png
+- plots/02_dist_time.png
+- plots/03_view_chat.png
+- plots/04_cluster_session.png
+- plots/05_session_k_selection.png
+- plots/06_session_cluster_profile.png
+- plots/07_ms.png
+- plots/07_session_cluster_stability.png
+- plots/08_cluster_minute.png
+- plots/08_mc.png
+- plots/13_m2_pipe.png
+- plots/15_null.png
+- plots/16_state.png
+- plots/18_review.png
+- plots/19_reason.png
+- plots/20_rra.png
+- plots/21_interval.png
+- plots/22_family_ablation_heatmap.png
+- plots/23_aggregation_sensitivity.png
+- plots/24_evidence_balance.png
+- plots/25_minute_signal_sensitivity.png
+- plots/26_synthetic_interval_recovery.png

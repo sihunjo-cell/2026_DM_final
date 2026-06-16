@@ -1,0 +1,19 @@
+# 세션 단위 모델 학습용 기본 feature 목록
+# cluster_number는 선택적으로 사용할 수 있는 범주형 행동 군집 feature이다.
+# cluster_number는 정답 라벨이나 확률이 아니다.
+# downstream 목표가 같은 KMeans cluster_number에서 파생되면 cluster_number를 feature로 쓰는 것은 목표 누수다.
+# supervised train/test 평가에서는 전체 데이터에 RobustScaler/KMeans를 fit하면 안 된다.
+# fold별 train split 안에서 RobustScaler와 KMeans를 fit하고, test fold에는 transform/predict로 cluster를 부여해야 한다.
+viewer_med
+viewer_max
+chat_mean
+unique_mean
+zero_rate
+zrun_max
+gap_med
+gap_max
+log_viewer
+log_chat
+log_unique
+log_zrun
+cluster_number

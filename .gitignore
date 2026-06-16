@@ -1,0 +1,32 @@
+# Ignore massive data files
+*.csv
+*.xlsx
+*.tar.gz
+*.zip
+*.7z
+
+# Ignore folders likely containing data
+exports/
+exports_individual/
+patched/
+temp/
+tmp/
+logs/
+*.log
+
+# Ignore environment variables
+.env
+.env.local
+
+# Python artifacts
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+
+# Local editor scratch files
+tempCodeRunnerFile.*
