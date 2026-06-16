@@ -230,6 +230,4 @@ run_pilot.py → CrawlManager(manager.py)
 
 ### 운영/정리
 - **`chzzk-crawler/.env`의 DB 계정**: 현재 `root`로 직접 접속하도록 되어 있고 비밀번호 앞에 공백이 있을 수 있음. `before_run.py`가 만든 `chzzk_user`로 맞추는 것을 권장.
-- **`before_run.py`의 root 비밀번호**: 이제 환경변수 `MYSQL_ROOT_PASSWORD`로 받는다(하드코딩 제거).
-- **`src/minute_ml.py`**: 현재 파이프라인에서 import되지 않는 미사용 모듈(정리 후보).
-- **대용량 zip**(`dm_pipe_final/*.zip`): 제출/분석 보관용 데이터 아카이브. 코드가 아니며 `.gitignore` 처리됨.
+- **`before_run.py`의 root 비밀번호**: 환경변수 `MYSQL_ROOT_PASSWORD`로 받는다.
