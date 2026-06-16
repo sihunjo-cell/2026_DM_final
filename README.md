@@ -149,7 +149,7 @@ load → prep(분단위 전처리) → minute_state(롤링/zero-run 등) → min
 
 ### 4.6 evidence 독립성 설계 (정직한 해석 + 근거)
 - 근본은 **하나의 신호 — "조건부 기대 대비 chat/unique 부족(deficit) + zero-chat 침묵이 *지속적으로* 나타나는가"**. 그래서 "독립 증거 6개"라고 말하면 방어가 안 된다. **대신 그 신호를 서로 겹치지 않는 5개 축(집중도·지속성·크기·비지도 확증·profile 이질성)으로만 요약**해 consensus를 구성했다.
-- **Reason-support를 집계에서 뺀 근거는 프로젝트 스펙 자체**: PDF 6p가 "reason support의 count는 confidence·lift·정답 라벨이 *아니라 설명 근거의 빈도*"라고 명시 → 증거가 아니라 설명이므로 집계 대상이 아니다. (코드에선 여전히 계산·기록되어 `dominant_reason`으로 보여준다.) 이로써 RRA의 독립성 가정 위반(같은 신호를 6번째로 다시 센 것)이 사라진다.
+- **Reason-support를 집계에서 뺀 근거는 프로젝트 스펙 자체**: reason support의 count는 confidence·lift·정답 라벨이 *아니라 설명 근거의 빈도* → 증거가 아니라 설명이므로 집계 대상이 아니다. (코드에선 여전히 계산·기록되어 `dominant_reason`으로 보여준다.) 이로써 RRA의 독립성 가정 위반(같은 신호를 6번째로 다시 센 것)이 사라진다.
 - 5개 축의 **방법 다양성**: Expected-response=지도학습(GBM) 크기, Minute-state=비지도(KMeans) 확증, Interval-anomaly=구간 outlier 탐지 — 서로 다른 추정 방식이라 단순 중복이 아니다. (Minute-state는 deficit feature 기반이라 *약한* 상관은 남으나, 지도/비지도 교차확증 역할.)
 - **설계 근거(표준 기법):** 누수 없는 조건부 기대치 = **run_id GroupKFold OOF + quantile(0.5) 회귀**(cross-fitting), 지속 구간 = **scan statistic `Σz/√n`**, 우연성 = **세션내 permutation null**, 결합 = **percentile-rank 평균 + RRA**(Kolde 2012) + **BH-FDR**. 모두 임의 규칙이 아니라 통계 표준 기법.
 - **모든 점수는 viewbot 확률이 아니라 검토 근거.** 최종 판단은 사람이 한다.
