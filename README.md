@@ -106,7 +106,7 @@ python live_review_pipeline.py --skip-collect --run-id 48
 
 ---
 
-## 4. 점수화 파이프라인 (Stage 2 상세 = PDF 방법론)
+## 4. 점수화 파이프라인 (Stage 2 상세)
 
 > 문제의식: viewbot은 **minute mismatch가 "연속적으로"** 일어나는 것. 띄엄띄엄 일어난 mismatch는 정상 방송으로 본다. 따라서 1분 단위 mismatch를 정의하고, 그것이 세션 안에서 **지속 구간**으로 뭉치는지를 찾는다.
 
