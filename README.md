@@ -223,11 +223,7 @@ run_pilot.py → CrawlManager(manager.py)
 
 ## 8. 알려진 이슈 / 주의
 
-### 방법론상 의도적 한계 (해석 시 반드시 인지)
+### 방법론상 의도적 한계 
 - **bin baseline은 보조 수단.** `chat_deficit`(viewer 10분위 median 기준)은 **전체 코퍼스를 viewer 분위로만** 나눠 구하므로 카테고리/시간대/스트리머를 섞는다. 그래서 **본판단 기준은 항상 카테고리·시간 조건화된 모델 baseline(`model_chat_deficit`)** 이고, bin은 `baseline_agree_*`의 거친 교차확인용으로만 쓴다.
 - **`empirical_p`는 "지속성(구간 집중도)" 진단값**이지 세션 이상도/viewbot 확률이 아니다. 균일하게 높은 세션은 `empirical_p`가 크게 나올 수 있으며, 크기(magnitude)는 expected-response·minute score가 따로 본다.
-- **결과는 reference 구성에 의존.** 모든 percentile rank가 전역 기준(PDF의 "전체기준 ranking")이라, `data/features`에 번들된 reference 집합이 바뀌면 동일 세션의 `review_order`도 바뀐다. 실행 간 절대 비교는 피하고 우선순위로만 사용. (HistGBM은 run_id OOF라 live는 held-out → 이 부분은 누수 없음)
-
-### 운영/정리
-- **`chzzk-crawler/.env`의 DB 계정**: 현재 `root`로 직접 접속하도록 되어 있고 비밀번호 앞에 공백이 있을 수 있음. `before_run.py`가 만든 `chzzk_user`로 맞추는 것을 권장.
-- **`before_run.py`의 root 비밀번호**: 환경변수 `MYSQL_ROOT_PASSWORD`로 받는다.
+- **결과는 reference 구성에 의존.** 모든 percentile rank가 전역 기준이라, `data/features`에 번들된 reference 집합이 바뀌면 동일 세션의 `review_order`도 바뀐다. 실행 간 절대 비교는 피하고 우선순위로만 사용. 
