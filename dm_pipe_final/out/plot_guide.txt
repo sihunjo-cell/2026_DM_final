@@ -14,7 +14,9 @@ Method 2 plots:
 - 07_session_cluster_stability.png: filename retained for backward compatibility; content is minute KMeans behavior-state stability diagnostic from mc_stab.csv ARI/subsample; supervised 성능지표 아님; 정답 라벨/확률 아님
 - 08_cluster_minute.png: alias/duplicate of 08_mc.png for handoff compatibility; colorbar is within-feature scaled profile value, not cluster id; 정답 라벨/확률 아님
 - 08_mc.png: minute KMeans behavior state profile; colorbar is within-feature scaled profile value, not cluster id; 정답 라벨/확률 아님
+- 09_mc_selection.png: minute 행동상태 KMeans 모델선택 비교(selection_score/silhouette); GMM/HDBSCAN은 구조 진단용이며 label source 아님; 정답 라벨/확률 아님
 - 13_m2_pipe.png: Method 2 pipeline 개요; 정답 라벨/확률 아님
+- 14_base_importance.png: expected-response GBM의 OOF permutation 변수중요도(log space MAE 증가분); 검토 근거이며 확률 아님
 - 15_null.png: shuffled null diagnostic; 정답 라벨/확률 아님
 - 16_state.png: minute state transition diagnostic; colorbar label is transition share, not cluster count; 정답 라벨/확률 아님
 - 18_review.png: 수동 검토 우선순위 evidence 요약; 정답 라벨/확률 아님
@@ -52,7 +54,9 @@ Method 2 plots:
 - plots/07_session_cluster_stability.png
 - plots/08_cluster_minute.png
 - plots/08_mc.png
+- plots/09_mc_selection.png
 - plots/13_m2_pipe.png
+- plots/14_base_importance.png
 - plots/15_null.png
 - plots/16_state.png
 - plots/18_review.png

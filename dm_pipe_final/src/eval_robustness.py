@@ -1418,6 +1418,7 @@ def write_eval_scorecard(out, eval_dir, cfg):
     weights = _read_csv(eval_dir / "minute_signal" / "signal_weight_sensitivity_summary.csv")
     scenario = _read_csv(eval_dir / "synthetic" / "synthetic_recovery_by_scenario.csv")
     importance = _read_csv(out / "base_importance.csv")
+    fit = _read_csv(out / "base_fit.csv")
 
     def _min(df, col):
         return float(pd.to_numeric(df.get(col), errors="coerce").min()) if not df.empty else np.nan
@@ -1438,6 +1439,12 @@ def write_eval_scorecard(out, eval_dir, cfg):
         neg_iou = float(pd.to_numeric(control.get("median_iou"), errors="coerce").median()) if not control.empty else np.nan
     rows.append({"metric": "synthetic_positive_median_iou", "value": pos_iou, "scale": "0-1 higher localizes injected interval", "what_it_checks": "주입한 연속 mismatch 구간을 회수하는가", "note": NOTE_NOT_REAL})
     rows.append({"metric": "synthetic_negative_control_median_iou", "value": neg_iou, "scale": "0-1 lower means fewer false intervals", "what_it_checks": "간헐적 zero 대조군에서 거짓 구간을 덜 잡는가", "note": "negative-control-like diagnostic"})
+
+    if not fit.empty and "target" in fit.columns:
+        for tgt in ["log_chat", "log_unique"]:
+            hit = fit.loc[fit["target"].astype(str).eq(tgt)]
+            if not hit.empty:
+                rows.append({"metric": f"expected_response_{tgt}_mae_skill_vs_median", "value": float(pd.to_numeric(hit["mae_skill_vs_median"], errors="coerce").iloc[0]), "scale": "0-1 higher beats unconditional median", "what_it_checks": f"{tgt} 조건부 baseline의 held-out 오차가 무조건부 median보다 얼마나 낮은가", "note": "OOF fit skill, not a classifier"})
 
     if not importance.empty and "target" in importance.columns:
         chat_imp = importance.loc[importance["target"].astype(str).eq("log_chat")].copy()

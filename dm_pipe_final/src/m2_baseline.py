@@ -29,6 +29,16 @@ IMPORTANCE_COLS = [
     "note",
 ]
 
+BASE_FIT_COLS = [
+    "target",
+    "n",
+    "oof_mae",
+    "oof_pinball_q50",
+    "mae_global_median_baseline",
+    "mae_skill_vs_median",
+    "note",
+]
+
 
 def _write_csv(df, path, columns=None):
     path = Path(path)
@@ -154,6 +164,34 @@ def _agreement(model_deficit, bin_deficit):
     return (model.gt(0) & rule.gt(0)).astype(int)
 
 
+def _fit_metrics(actual, pred, target):
+    """Held-out OOF fit of the conditional median baseline vs an unconditional
+    global-median baseline, so accuracy-free quality is still quantified."""
+    a = pd.to_numeric(actual, errors="coerce")
+    p = pd.to_numeric(pred, errors="coerce")
+    mask = a.notna() & p.notna()
+    a, p = a[mask], p[mask]
+    n = int(len(a))
+    if n == 0:
+        return {"target": target, "n": 0, "oof_mae": np.nan, "oof_pinball_q50": np.nan,
+                "mae_global_median_baseline": np.nan, "mae_skill_vs_median": np.nan,
+                "note": "no rows with both actual and prediction"}
+    err = (a - p).abs()
+    mae = float(err.mean())
+    median = float(a.median())
+    mae_median = float((a - median).abs().mean())
+    skill = float(1.0 - mae / mae_median) if mae_median > 0 else np.nan
+    return {
+        "target": target,
+        "n": n,
+        "oof_mae": mae,
+        "oof_pinball_q50": float(0.5 * mae),
+        "mae_global_median_baseline": mae_median,
+        "mae_skill_vs_median": skill,
+        "note": "held-out OOF error in log space; skill = error reduction vs unconditional global median; not a classifier",
+    }
+
+
 def _feature_groups(columns):
     """Group one-hot category dummies into a single 'category' feature for readable importance."""
     groups = {}
@@ -243,6 +281,12 @@ def build_expected_response(minute_df, out, cfg=None):
     result["baseline_agree_chat"] = _agreement(result["model_chat_deficit"], result.get("chat_deficit"))
     result["baseline_agree_unique"] = _agreement(result["model_unique_deficit"], result.get("unique_deficit"))
 
+    fit = pd.DataFrame([
+        _fit_metrics(actual_chat, result["base_log_chat_q50"], "log_chat"),
+        _fit_metrics(actual_unique, result["base_log_unique_q50"], "log_unique"),
+    ])
+    _write_csv(fit, out / "base_fit.csv", BASE_FIT_COLS)
+
     importance_note = "importance는 비활성화되어 계산하지 않았다."
     base_cfg = (cfg or {}).get("m2_expected_response", {})
     if bool(base_cfg.get("importance", True)):
@@ -264,6 +308,7 @@ def build_expected_response(minute_df, out, cfg=None):
         f"unique fit: {unique_note}.",
         f"사용 feature: {', '.join(x.columns[:80])}" + (" ..." if len(x.columns) > 80 else ""),
         "출력: base_log_chat_q50, base_log_unique_q50, model_chat_deficit, model_unique_deficit.",
+        "base_fit.csv: held-out OOF MAE/pinball(q0.5)와 무조건부 global median 대비 skill을 기록한다. 라벨 없는 적합도 정량값이다.",
         importance_note,
         "한계: 실제 정답 라벨이 없는 baseline이다. deficit은 수동 검토 근거이며 확률이 아니다.",
     ]

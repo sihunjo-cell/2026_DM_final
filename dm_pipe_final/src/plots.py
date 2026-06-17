@@ -603,6 +603,57 @@ def _plot_pipe(plots):
     _save(fig, plots / "13_m2_pipe.png")
 
 
+def _plot_mc_selection(out, plots):
+    mc = _read(out, "mc_select.csv")
+    if mc.empty or "algorithm" not in mc.columns or "selection_score" not in mc.columns:
+        _blank(plots / "09_mc_selection.png", "mc_select.csv not available\nminute behavior-state model selection")
+        return
+    km = mc[mc["algorithm"].astype(str).str.lower().eq("kmeans")].copy()
+    km["k"] = pd.to_numeric(km["selected_k_num"], errors="coerce")
+    km = km.dropna(subset=["k"]).sort_values("k")
+    if km.empty:
+        _blank(plots / "09_mc_selection.png", "no KMeans candidates in mc_select.csv")
+        return
+    fig, ax = plt.subplots(figsize=(8.5, 4.5))
+    ax.plot(km["k"], pd.to_numeric(km["selection_score"], errors="coerce"), "-o", color="#4C78A8", label="selection_score (composite)")
+    ax.plot(km["k"], pd.to_numeric(km["silhouette"], errors="coerce"), "-s", color="#F58518", label="silhouette")
+    sel = km[km["selected"].astype(str).str.lower().isin(["true", "1"])]
+    if not sel.empty:
+        ksel = int(sel["k"].iloc[0])
+        ax.axvline(ksel, color="green", ls="--", alpha=0.7, label=f"selected KMeans k={ksel}")
+    ax.set_xlabel("minute KMeans k")
+    ax.set_ylabel("score")
+    ax.set_ylim(0, 1)
+    ax.set_title("09 Minute behavior-state model selection (KMeans)\nGMM/HDBSCAN are structural diagnostics, not label sources")
+    ax.legend(fontsize=8)
+    ax.grid(alpha=0.25)
+    _save(fig, plots / "09_mc_selection.png")
+
+
+def _plot_base_importance(out, plots):
+    imp = _read(out, "base_importance.csv")
+    if imp.empty or "target" not in imp.columns:
+        _blank(plots / "14_base_importance.png", "base_importance.csv not available\nexpected-response feature importance")
+        return
+    fig, axes = plt.subplots(1, 2, figsize=(11, 4.2), sharex=True)
+    for ax, tgt in zip(axes, ["log_chat", "log_unique"]):
+        d = imp[imp["target"].astype(str).eq(tgt)].copy()
+        d = d.sort_values("importance_mae_increase")
+        ax.barh(
+            d["feature"].astype(str),
+            pd.to_numeric(d["importance_mae_increase"], errors="coerce"),
+            xerr=pd.to_numeric(d.get("importance_std"), errors="coerce"),
+            color="#4C78A8",
+            edgecolor="black",
+            alpha=0.85,
+        )
+        ax.set_title(f"{tgt} OOF permutation importance")
+        ax.set_xlabel("MAE increase (log space)")
+        ax.grid(axis="x", alpha=0.25)
+    fig.suptitle("14 Expected-response baseline feature importance (review evidence, not probability)", fontsize=13)
+    _save(fig, plots / "14_base_importance.png")
+
+
 def _write_plot_doc(out):
     plots = Path(out) / "plots"
     session = _read(out, "session_summary_processed.csv")
@@ -617,6 +668,8 @@ def _write_plot_doc(out):
         "07_session_cluster_stability.png": "filename retained for backward compatibility; content is minute KMeans behavior-state stability diagnostic from mc_stab.csv ARI/subsample; supervised 성능지표 아님; 정답 라벨/확률 아님",
         "07_ms.png": "Method 2 rule-rank score 분포; 정답 라벨/확률 아님",
         "08_mc.png": "minute KMeans behavior state profile; colorbar is within-feature scaled profile value, not cluster id; 정답 라벨/확률 아님",
+        "09_mc_selection.png": "minute 행동상태 KMeans 모델선택 비교(selection_score/silhouette); GMM/HDBSCAN은 구조 진단용이며 label source 아님; 정답 라벨/확률 아님",
+        "14_base_importance.png": "expected-response GBM의 OOF permutation 변수중요도(log space MAE 증가분); 검토 근거이며 확률 아님",
         "08_cluster_minute.png": "alias/duplicate of 08_mc.png for handoff compatibility; colorbar is within-feature scaled profile value, not cluster id; 정답 라벨/확률 아님",
         "13_m2_pipe.png": "Method 2 pipeline 개요; 정답 라벨/확률 아님",
         "15_null.png": "shuffled null diagnostic; 정답 라벨/확률 아님",
@@ -778,8 +831,10 @@ def make_plots(minute_all, minute_model, session_all, session_model, out):
     _plot_session_cluster_stability(out, plots)
     _plot_ms(out, plots)
     _plot_mc(out, plots)
+    _plot_mc_selection(out, plots)
     _plot_sens(out, plots)
     _plot_ep(out, plots)
     _plot_rank(out, plots)
     _plot_pipe(plots)
+    _plot_base_importance(out, plots)
     _write_plot_doc(out)
