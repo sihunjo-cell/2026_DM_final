@@ -1,0 +1,7 @@
+﻿model,pr_auc,roc_auc,precision_at_pos_k,recall_at_pos_k,precision_at_0.5,recall_at_0.5,f2_at_0.5
+logistic_balanced,1.0,1.0,1.0,1.0,1.0,1.0,1.0
+decision_tree_depth3,1.0,1.0,1.0,1.0,1.0,1.0,1.0
+gradient_boosting,1.0,1.0,1.0,1.0,1.0,1.0,1.0
+random_forest_balanced,1.0,1.0,1.0,1.0,1.0,1.0,1.0
+linear_svc_calibrated,0.9999999999999998,1.0,1.0,1.0,1.0,0.8636363636363636,0.8878504672897196
+gaussian_nb,0.9030896376350921,0.9965508745996552,0.9090909090909091,0.9090909090909091,0.3492063492063492,1.0,0.7284768211920529

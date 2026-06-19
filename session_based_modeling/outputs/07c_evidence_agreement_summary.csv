@@ -1,0 +1,7 @@
+﻿evidence,n_sessions
+rule_mismatch_top10,196
+normal_anomaly_top10,104
+density_anomaly_top10,72
+hdbscan_noise,815
+kmeans_cluster_1,111
+hidden_candidate_cluster_0_top10,91

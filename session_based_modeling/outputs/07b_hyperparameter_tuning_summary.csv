@@ -1,0 +1,4 @@
+﻿model,best_cv_pr_auc,best_params
+tuned_gradient_boosting,0.9914205998604976,"{'model__learning_rate': 0.03, 'model__max_depth': 1, 'model__n_estimators': 80}"
+tuned_rbf_svc,0.9915283615520769,"{'model__estimator__C': 8.0, 'model__estimator__gamma': 'scale'}"
+tuned_mlp,0.9364327963002184,"{'model__alpha': 0.0001, 'model__hidden_layer_sizes': (12,)}"

@@ -1,0 +1,6 @@
+﻿model,group_col,flagged_n,overlap_with_minute_top_same_n,precision_vs_minute_top_same_n,mean_minute_rank_of_flagged,median_minute_rank_of_flagged,flagged_outside_minute_top_same_n
+03,review_group,264,110,0.4166666666666667,585.3257575757576,334.5,154
+07a,cluster_aware_review_group,196,83,0.42346938775510207,344.2142857142857,234.0,113
+07b,advanced_binary_review_group,196,104,0.5306122448979592,265.5204081632653,179.0,92
+07c,discovery_group,202,108,0.5346534653465347,246.2970297029703,180.5,94
+07d,pu_discovery_group,296,182,0.6148648648648649,295.4628378378378,224.5,114
